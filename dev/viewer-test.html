@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The page lives in /dev, so resolve everything against the repo root. The import map below is the one the host page uses. -->
+<base href="../">
+<title>3D viewer harness</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/viewer3d.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+<style>
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+  .hx-bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 14px; font: 11px/1.4 var(--font-mono); color: var(--text-dim); border-bottom: 1px solid var(--line); }
+  .hx-bar a { color: var(--accent); }
+  .hx-full { padding: 16px; }
+  .hx-hero { position: relative; width: var(--hx-w, 100%); height: var(--hx-h, 640px); margin: 0 auto; overflow: hidden; background: radial-gradient(ellipse at 70% 50%, var(--bg-raised), var(--bg) 70%); }
+  .hx-hero[data-bg="checker"] { background: repeating-conic-gradient(var(--bg-raised) 0 25%, var(--bg-sunken) 0 50%) 0 0 / 24px 24px; }
+  .hx-hero .hx-copy { position: absolute; left: 6%; top: 50%; transform: translateY(-50%); z-index: 2; max-width: 36%; pointer-events: none; }
+  .hx-hero .hx-copy h1 { margin: 0; font: 600 clamp(28px, 5vw, 64px)/1.02 var(--font-display); letter-spacing: -0.02em; text-transform: uppercase; }
+  .hx-hero .hx-copy p { margin: 14px 0 0; color: var(--text-dim); max-width: 36ch; }
+  #v3d-root.hx-hero-root { position: absolute; inset: 0; }
+  .hx-extra button { padding: 8px 12px; font: 600 11px var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--text); background: transparent; border: 1px solid var(--line-strong); cursor: pointer; }
+  .hx-error { padding: 40px; text-align: center; color: var(--warn); font: 13px var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="hx-bar" id="hxbar"></div>
+<main id="host"></main>
+<script type="module">
+import { createViewer, webglAvailable } from './js/viewer3d/viewer.js';
+
+const q = new URLSearchParams(location.search);
+const variant = q.get('variant') === 'hero' ? 'hero' : 'full';
+const debug = q.get('debug') === '1';
+
+if (q.get('theme') === 'light') {
+  const st = document.createElement('style');
+  st.textContent = ':root{--bg:#ffffff;--bg-raised:#f3f4f7;--bg-sunken:#e9ebf0;--line:#d6d9e0;--line-strong:#b8bdc9;--text:#0b0f17;--text-dim:#4b556b;--text-faint:#7a8398;--accent:#1f5eff;--accent-ink:#fff;--ok:#12803a;--warn:#a96100;--bad:#c42f2f;--us:#16a34a;--cn:#dc2626;--radius-s:0px;--radius-m:0px}';
+  document.head.appendChild(st);
+}
+
+const host = document.getElementById('host');
+let rootEl;
+if (variant === 'hero') {
+  const w = q.get('w'), h = q.get('h');
+  host.innerHTML = '<div class="hx-hero" data-bg="' + (q.get('bg') || 'dark') + '"><div class="hx-copy"><h1>Built to move</h1><p>Hero variant: transparent canvas, turntable, offset beside the headline.</p></div><div id="v3d-root" class="hx-hero-root"></div></div>';
+  const fr = host.firstElementChild;
+  if (w) fr.style.setProperty('--hx-w', /^\d+$/.test(w) ? w + 'px' : w);
+  if (h) fr.style.setProperty('--hx-h', /^\d+$/.test(h) ? h + 'px' : h);
+  rootEl = document.getElementById('v3d-root');
+} else {
+  host.innerHTML = '<div class="hx-full"><div id="v3d-root"></div></div>';
+  rootEl = document.getElementById('v3d-root');
+}
+
+const events = (window.__events = []);
+window.__hxClicks = [];
+document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-hx]'); if (b) window.__hxClicks.push(b.dataset.hx + ':' + b.dataset.hxCls); });
+
+function options() {
+  return {
+    variant,
+    classId: q.get('class') || 'full',
+    size: q.get('size') || undefined,
+    mode: q.get('mode') || 'sub',
+    partId: q.get('part') || null,
+    debug,
+    offsetX: Number(q.get('offsetX')) || 0,
+    storagePrefix: q.get('prefix') || undefined,
+    extraDetail: (part, cls) => '<div class="hx-extra"><button type="button" data-hx="' + part.id + '" data-hx-cls="' + cls + '">Host action: ' + part.id + '</button></div>',
+    onSelect: (id, cls) => events.push(['select', id, cls]),
+    onClassChange: (cls, size) => events.push(['class', cls, size]),
+  };
+}
+
+function mount() {
+  try {
+    const viewer = createViewer(rootEl, options());
+    window.__viewer = viewer;
+    if (debug && viewer.debug) { const d = viewer.debug; Object.assign(d, { viewer, createViewer, webglAvailable, options, mount, rootEl }); window.__v3d = d; }
+    return viewer;
+  } catch (err) {
+    rootEl.innerHTML = '<div class="hx-error">' + (err.code || 'ERROR') + ': ' + err.message + '</div>';
+    rootEl.dataset.error = err.code || 'ERROR';
+    throw err;
+  }
+}
+// Layout self-check used by the QA suites: interactive controls must not overlap each other and every control must be the
+// element a click at its centre actually reaches (a control hidden under another one passes a plain overflow scan).
+// Controls scrolled out of an overflow container are not counted; partly clipped ones are measured by their visible part.
+function checkOverlaps(scope) {
+  const sc = scope || rootEl;
+  const clip = (e) => {
+    let r = e.getBoundingClientRect(); r = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const pr = p.getBoundingClientRect();
+      r = { left: Math.max(r.left, pr.left), top: Math.max(r.top, pr.top), right: Math.min(r.right, pr.right), bottom: Math.min(r.bottom, pr.bottom) };
+    }
+    return r;
+  };
+  const items = [];
+  for (const e of sc.querySelectorAll('button, input, select, a[href]')) {
+    if (e.closest('[hidden], [aria-hidden="true"]') || getComputedStyle(e).visibility === 'hidden') continue;
+    const r = clip(e);
+    if (r.right - r.left > 1 && r.bottom - r.top > 1) items.push({ e, r });
+  }
+  const out = { controls: items.length, overlaps: [], blocked: [] };
+  const area = (a, b) => { const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); return w > 1 && h > 1 ? w * h : 0; };
+  const name = (e) => e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : '') + (e.dataset && (e.dataset.v3dAct || e.dataset.f) ? '[' + (e.dataset.v3dAct || e.dataset.f) + (e.dataset.v ? ':' + e.dataset.v : '') + ']' : '');
+  for (let i = 0; i < items.length; i++) {
+    const a = items[i];
+    for (let j = i + 1; j < items.length; j++) {
+      const b = items[j];
+      if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+      const ar = area(a.r, b.r);
+      if (ar) out.overlaps.push([name(a.e), name(b.e), Math.round(ar)]);
+    }
+    for (const fx of [0.2, 0.5, 0.8]) {
+      const x = a.r.left + (a.r.right - a.r.left) * fx, y = (a.r.top + a.r.bottom) / 2;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue;   // off-screen points cannot be hit-tested
+      const hit = document.elementFromPoint(x, y);
+      if (hit && !(a.e === hit || a.e.contains(hit) || (hit.closest && hit.closest('label') && hit.closest('label') === a.e.closest('label')))) { out.blocked.push([name(a.e), name(hit), fx]); break; }
+    }
+  }
+  return out;
+}
+window.__harness = { mount, createViewer, webglAvailable, rootEl, options, checkOverlaps };
+
+document.getElementById('hxbar').innerHTML =
+  '<b>viewer harness</b><span>variant=' + variant + ' class=' + (q.get('class') || 'full') + ' size=' + (q.get('size') || '-') + ' mode=' + (q.get('mode') || 'sub') + '</span>'
+  + '<a href="dev/viewer-test.html?debug=1">full</a><a href="dev/viewer-test.html?variant=hero&debug=1&offsetX=0.2">hero</a><a href="dev/viewer-test.html?size=lineup&debug=1">lineup</a><a href="dev/viewer-test.html?theme=light">light tokens</a>';
+
+mount();
+</script>
+</body>
+</html>
