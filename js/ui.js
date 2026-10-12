@@ -7,8 +7,10 @@ export const $ = (s, root = document) => root.querySelector(s);
 export const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const PART_BY_ID = Object.fromEntries(PARTS.map((p) => [p.id, p]));
-export const canonPart = (id) => PART_ALIAS[id] || id;
+/** True only for a key the object really has: hash values like 'constructor' or 'toString' must never match inherited members. */
+export const has = (obj, key) => obj != null && Object.prototype.hasOwnProperty.call(obj, key);
+const PART_BY_ID = Object.assign(Object.create(null), Object.fromEntries(PARTS.map((p) => [p.id, p])));
+export const canonPart = (id) => (has(PART_ALIAS, id) ? PART_ALIAS[id] : id);
 
 /** A part with the per-class overrides applied (labels, specs and origin notes differ per platform). */
 export function partFor(id, classId = 'full') {
@@ -22,7 +24,8 @@ export function keySpec(p, classId) {
   if (p.dof) return ks ? `${p.dof} DOF · ${ks}` : `${p.dof} DOF`;
   return ks || '';
 }
-export const className = (classId) => (CLASSES[classId] ? CLASSES[classId].short : '');
+export const isClass = (id) => has(CLASSES, id);
+export const className = (classId) => (isClass(classId) ? CLASSES[classId].short : '');
 export { SUBSYSTEMS, ORIGIN_REC, CLASSES };
 
 export function daysUntil(iso) {
@@ -57,12 +60,15 @@ export function flash(el) {
 /** Hash helpers. Form: #station or #station?key=value&key=value */
 export function parseHash(order) {
   const raw = location.hash.replace(/^#/, '');
-  const [name, q] = raw.split('?');
+  const [rawName, q] = raw.split('?');
+  const name = (rawName || '').replace(/\/+$/, '').toLowerCase();
   const alias = { overview: 'plan' };
   // an empty hash is the robot; any other name that is not a station (the skip link's #scene, a typo) is ignored by the router
   const known = order.includes(alias[name] || name);
   const station = !name ? 'robot' : (known ? (alias[name] || name) : null);
-  const params = {};
-  if (q) for (const kv of q.split('&')) { const [k, v] = kv.split('='); if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || ''); }
+  // a null-prototype bag, and a decoder that cannot throw: a bad escape such as %ZZ is kept as typed
+  const decode = (s) => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+  const params = Object.create(null);
+  if (q) for (const kv of q.split('&')) { const [k, v] = kv.split('='); if (k) params[decode(k)] = decode(v || ''); }
   return { station, params };
 }

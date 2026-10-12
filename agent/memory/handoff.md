@@ -2,54 +2,29 @@
 
 ## State as of 2026-10-12
 
-**Live site (unchanged this session):** `index.html` is the five-tab site from the first pass: Overview, Robot (2D SVG pins), Globe, Checklist, Timeline. It is deployed at https://humanoid-sourcing-plan.netlify.app. Nothing from this session has been deployed.
+The site is rebuilt around the robot. See `README.md` for the full description. Short version: six stations (Robot, Globe, Plan, Checklist, Timeline, Planner) on a CSS 3D turntable ring; the robot is the main page; clicking a part on it turns the robot and spins the ring to the globe filtered to that part's suppliers. SpaceX-style design (black, one near-white, tracked uppercase, mono data, hairlines).
 
-**Committed but NOT wired into the page:**
-- `js/viewer3d/` is the build planner's three.js viewer ported into a mountable ES module. Public entry: `js/viewer3d/viewer.js`, exports `webglAvailable()` and `createViewer(root, options)`. Two variants:
-  - `full`: A2, X2, A3, D1 plus A2+X2 and true-scale lineup, three color modes, labels with leader lines, x-ray, camera views, details panel, live parts planner (strict >65% / >75%), parts list. Planner state persists in localStorage under `hsp-plan-v1-<classId>`.
-  - `hero`: transparent canvas, slow turntable, no UI, optional `offsetX` to park the robot beside a headline.
-  Options include `extraDetail(part, classId)` (host HTML appended to the details panel, so the host can add "suppliers on the globe" buttons), `onSelect`, `onClassChange`. `createViewer` throws an Error with `code === 'NO_WEBGL'` when WebGL is missing; fall back to the 2D schematic.
-- `css/viewer3d.css`: all viewer styles, scoped under `.v3d`, consuming only the variables in `css/tokens.css`. Re-theme by editing the tokens.
-- `css/tokens.css`: the token contract. Currently the placeholder dark theme. The redesign should own this file.
-- `js/data/` (`planner-parts.js`, `classes.js`, `bom.js`): the planner's data, unchanged copies. `js/viewer3d/robot.js`: geometry builder (import path fixed only).
-- `vendor/three/`: three.js plus the addons the viewer imports. The host page must declare:
-  `<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>`
-  Load the viewer lazily with `await import('./js/viewer3d/viewer.js')` so the ~2 MB of three.js does not block the first paint.
-- `dev/viewer-test.html`: standalone harness. Query params: `variant=full|hero`, `class=full|compact|a3|d1`, `size=full|compact|a3|d1|both|lineup`, `mode=sub|origin|calc`, `part=<id>`, `debug=1` (sets `window.__viewer`, the public viewer object). Serve the repo root with any static server, for example `python3 -m http.server 8000`.
-- `docs/design-spec.md`: SpaceX design-language reference (see below).
+Verified in headless Chromium: about 60 behaviour checks pass (`tests/e2e/`, see `tests/README.md`) with zero console errors; layouts checked at 1920, 1440, 1280x720, 1024, 820 and 390 widths; three independent reviews (visual design vs the spec, behaviour and robustness, accessibility and performance) were run and their findings fixed.
 
-**Verified this session:** the viewer loads for all four classes, both and lineup, at 1440 and 390 px, with zero console errors and zero failed requests. A2 example plan scores 70.0%. Hero renders on a transparent background. Two rounds of independent QA (functional, visual, lifecycle) in headless Chromium found and fixed about 19 issues in round 0.
+## Architecture in one paragraph
+`index.html` holds the shell. `js/app.js` is the router (hash routes, parsed by `js/ui.js`) and wires the nav, menu, dock and keys. `js/ring.js` lays the stations out as faces of a drum and animates it with the Web Animations API; at rest only the active station is laid flat, visible and interactive, the rest are `visibility:hidden`, `inert`, `aria-hidden`. Each station is a module in `js/views/` returning `{prepare(params), enter(params), leave(), refresh(), destroy()}`; `prepare` runs before a spin (set filters, start loading), `enter` after it, `leave` when the ring turns away (pause WebGL). The 3D viewer (`js/viewer3d/viewer.js`, `createViewer(root, {variant})`) has three variants: `stage` (main page: transparent canvas, hotspots, turntable, `spinTo`/`spinBy`/`highlight`/`setXray`/`setSize`/`setOffsetX`), `hero` (non-interactive) and `full` (the planner). three.js and the globe libraries are loaded lazily.
 
-## Open items from QA round 1 (reported, fix round was interrupted, so some may already be fixed; none re-tested)
-Visual:
-- Expanded mini score bar collapses and overlaps at about 790-940 px and 1180-1380 px viewport widths.
-- At about 900-1150 px (iPad landscape, small laptops) the phone toolbar is used beside the 400 px side panel.
-- Phone: footer legend height depends on color mode, so the content shifts by about 42 px when switching mode. A few tap targets are under 40 px. Selected label sits on its own anchor in A2+X2; a leader crosses another label in compact and D1.
-Lifecycle:
-- `setView()` while the stage has zero size can leave NaN in the camera (blank stage, console spam). Only a size change recovers it.
-- `setSize()` or `select({classId})` while the viewer is hidden is not framed when it is shown (lineup cuts the quadruped, D1 too small).
-- Device pixel ratio changes without a CSS size change are not picked up. Token colors are read once at creation.
-Functional:
-- `onSelect` fires redundant or stale intermediate events on a class change.
-- With x-ray on, the battery pack cannot be picked and the click clears the selection (inherited from the original).
-Known and accepted: three.js keeps one shared lookup texture after `destroy()` (constant, not a per-cycle leak); canvas click on the lidar picks the collar shell unless x-ray is on; label density "All" behaves as "Key" in A2+X2.
+## How to change things
+- Look and feel: `css/tokens.css` (all colors, fonts, spacing tokens), then `css/site.css`. The planner and stage inherit through the tokens.
+- Suppliers, steps, checklist items, milestones: `js/data/site-data.js`. Keep the checklist at 15 items in a stable order (the share-link code is one letter per item) or change `CK_KEY` in `js/checklist-store.js`. `parts: ['*']` means every part.
+- Parts and platforms: `js/data/planner-parts.js`, `classes.js`, `bom.js` (the build planner's data, unchanged). A part no supplier lists exactly falls back to its group via `PART_GROUP` in `site-data.js`.
+- Copy on the main page: `js/views/robot.js`.
 
-## Next steps (the original ask, not done)
-1. Wire the viewer into the Robot tab: add the importmap, a 3D / Schematic toggle (3D default, schematic fallback on `NO_WEBGL`), mount with `extraDetail` returning `data-go` buttons for the Globe. Unify ids between the SVG schematic's `PARTS` in `index.html` and `js/data/planner-parts.js` (known mismatch: `fisheyeL` vs `fisheye`; the planner also has waist, touch, stereo, shtouch, legFL/FR/RL/RR, dock, payload that suppliers do not reference yet).
-2. Hero: mount `createViewer(el, {variant: 'hero', offsetX: ...})` on the Overview, and destroy it when leaving the tab (one WebGL context at a time).
-3. Redesign to the SpaceX language per `docs/design-spec.md`: pure black canvas, one near-white at stepped opacities, uppercase tracked labels, a mono face for data, 1 px hairlines, no cards or shadows, one scene per viewport, transparent nav that hides on scroll-down. Free-font matches verified on Google Fonts: Barlow family for display, Roboto Mono or JetBrains Mono for data. Do not use SpaceX's logo, wordmark, imagery, or copy.
-4. Move the inline script out of `index.html` into modules, add the 3D toggle to the smoke test, then deploy.
-5. Decide whether `dev/` and `docs/` should be excluded from the Netlify publish (the publish directory is the repo root, so both would be public).
-
-## How to change things (live site)
-- Parts: `PARTS` array in `index.html` (pin x/y in a 360x720 viewBox, `side` picks label side, `inside` draws a dashed pin).
-- Suppliers: `SUPPLIERS` array (lat/lon, `groups`, `parts`, `status`, `origin`, `when`).
-- Checklist: `CHECKLIST` (15 items; the share-link code is 15 chars of c/p/o in item order, so keep the count and order stable or bump `CK_KEY`).
-- Milestones: `MILESTONES` (`kind` fixed or proposed; `id` is the `#timeline?m=` anchor).
-
-## Lost content
-The original "sourcing plan" Netlify site (capital estimates, physical space, events, contacts) was never deployed and has no source anywhere reachable. If a local copy turns up, add it as data to the existing tabs.
+## Known limits and open decisions
+- Hotspots do not test occlusion: a front-facing dot can sit behind the robot's own limb. Labels over the light robot body rely on a black text halo.
+- Software WebGL in the test environment runs at about 3 fps, so spins take longer there than on a real GPU. Real-device performance has not been measured.
+- The turntable reading ("pages on a ring that spin") was my interpretation of the request. If the intent was different, say the robot's own platform turning, that is a small change in `js/views/robot.js` and `js/viewer3d/stage.js`.
+- The monochrome palette keeps small muted tints for origin (US/China/third country) and checklist status, always paired with a label or shape. Revisit if a purer monochrome is wanted.
+- `dev/`, `docs/`, `tests/` and `agent/` are public on Netlify because the publish directory is the repo root. Exclude with redirects in `netlify.toml` if that matters.
+- The Planner station still looks like a denser tool (boxed labels); it is restyled only through scoped overrides in `css/site.css`.
+- Lost content: the original "sourcing plan" site (capital estimates, physical space, events, contacts) was never deployed and has no reachable source. The GitHub repo description mentions strain-wave reducer suppliers, a Tesla playbook, capital estimates, events and contacts; if a local copy exists, add it as data to the existing stations.
+- Supplier HQ coordinates and the Allied Motion to Allient rename are from general knowledge and were not verified by search.
 
 ## Repo notes
-- Default branch on GitHub is `claude/new-session-mnuntz` because the repo was empty when work began, so no pull request can target a different base until a `main` exists.
+- `main` on GitHub is the first commit (the earlier merged site). Work is on `claude/new-session-mnuntz`; draft PR #1 tracks it.
 - Deploy: `netlify deploy --prod` from the repo root, or the Netlify MCP deploy tool (site id `a905d604-59ef-40ea-a382-ae74e6680f47`).

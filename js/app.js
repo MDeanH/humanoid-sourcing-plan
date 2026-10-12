@@ -54,6 +54,9 @@ function focusStation(id) {
 
 /* ---------------------------------------------------------------- routing */
 function route() {
+  try { routeNow(); } catch (err) { console.error(err); }
+}
+function routeNow() {
   const { station, params } = parseHash(ORDER);
   if (!station) return;                       // not one of ours (the skip link's #scene, a typo): leave the ring where it is
   const idx = ORDER.indexOf(station);
@@ -133,7 +136,8 @@ document.addEventListener('click', (e) => {
 
 /* ---------------------------------------------------------------- boot */
 (function initCounts() { const c = counts(); const n = $('#navCount'); if (n) n.textContent = `${c.c}/${c.total}`; })();
-route();
+window.__hsp = { ring, views, go, ORDER };
+try { route(); } catch (err) { console.error(err); }
 booted = true;
 paintDock();
 /* The 3D engine is about 2 MB of script. A cold load of any station other than the robot or the planner does not need it, so
@@ -145,4 +149,4 @@ paintDock();
 }
 // keep the countdowns honest if the page stays open past midnight
 setInterval(() => Object.values(views).forEach((v) => v.refresh && v.refresh()), 3600 * 1000);
-window.__hsp = { ring, views, go, ORDER };
+

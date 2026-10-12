@@ -40,7 +40,7 @@ export function createTimelineView(el) {
     prepare() {},
     enter(params) {
       const t = $('[data-role=title]', el);
-      if (params && params.m) flash($('#tl-' + params.m, el));
+      if (params && /^[\w-]{1,40}$/.test(params.m || '')) flash($('#tl-' + params.m, el));
       else el.scrollTop = 0;
     },
     leave() {},

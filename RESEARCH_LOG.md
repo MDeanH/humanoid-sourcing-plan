@@ -49,3 +49,30 @@ Add the build planner's 3D robots to the merged site, and improve the site desig
 - Is a SpaceX-style monochrome palette acceptable for a compliance tool whose pass, fail, and open states are currently color coded? The design spec suggests shape and label first, with a single desaturated tint as a last resort.
 - The origin colors (US green, China red, third-country amber) carry meaning on the globe and in the planner; the redesign needs a decision on whether they stay.
 - Should `dev/` and `docs/` be excluded from the public Netlify publish?
+
+## 2026-10-12 — Robot-first turntable site, SpaceX-style redesign, three-way review
+
+- Start: 2026-10-12 03:05 UTC (approx.)
+- End: 2026-10-12 04:55 UTC (approx.)
+- Duration: about 1 hour 50 minutes of wall-clock time, with a background agent building the interactive robot variant in parallel for most of it and three independent review agents running at the end.
+
+### Question
+Make the robot the first and main page, have the pages spin around on a turntable, make clicking a part spin around to the globe, and raise the design quality in the style of spacex.com.
+
+### Sources
+- `docs/design-spec.md` (the earlier research: the agent's reading of spacex.com's own stylesheet), applied as the design system. I did not re-check spacex.com this session.
+- The existing build planner data and viewer, and the site data carried over from the first merged site.
+- Google Fonts css2 endpoints for Barlow (400 to 700) and Roboto Mono (400, 500), checked with a 200 and real font-face blocks.
+- Headless Chromium (Playwright) runs: about 60 behaviour checks across three suites, screenshots at six viewport sizes, frozen mid-spin frames captured by pausing the ring's Web Animation, and three independent review agents (visual design against the spec; behaviour and robustness including hostile URLs and failure injection; accessibility and performance with axe-core and timing measurements).
+
+### Conclusion
+- Interpretation: "pages spin around on a turntable" was built as six stations on the faces of a CSS 3D drum that spins to the target, with a mid-spin pull-back; the robot also takes a turn of its own as the ring leaves it. "Clicking on parts spins around to the globe" is the robot turning to the part, then the ring spinning to the globe, filtered to that part's suppliers. This reading was my own; the user can redirect.
+- The interactive robot (transparent canvas, hotspots, drag, turntable, `spinTo`) was built as a new viewer variant by a background agent against a written contract, and passed its own checks and mine.
+- Review outcomes: the visual review found 4 must-fix, 8 should-fix and several polish items (hint and focus-bar collisions, label legibility over the silver body, a Planner that broke the flat language, off-palette bars, off-axis left edges, a leaky mobile menu, dim past milestones). The accessibility review found 7 major issues (skip link, arrow-key collisions, hotspot tab order, menu semantics, tap targets, reduced-motion globe, clipped menu at 360 px) and two performance majors (the full 3D stack downloaded on every cold load; an import waterfall). The behaviour review found 2 majors (a malformed URL escape or a prototype-key value killed the boot; focus lost after every globe filter click) and 9 minors. All were fixed except the items listed below, and each fix has a regression check in `tests/e2e/`.
+- Measured: memory is flat over 60 navigations (about 14.4 MB), hidden stations cost 0 animation frames, WebGL contexts stay at two, layout shift is under 0.03 everywhere. The 3D engine no longer loads on a cold load of any station other than the robot or the planner.
+
+### Open questions
+- Real-device performance is unmeasured: the test browser renders WebGL in software at about 3 fps.
+- Not fixed: hotspots do not test occlusion; the Planner still looks denser than the other stations; fonts are not self-hosted; assets are not fingerprinted for long caching; two WebGL driver warnings per load come from the software renderer.
+- Is the muted tint on origin and status (US, China, third country; confirmed, in progress, open) acceptable, or should the site go purely monochrome?
+- Should `dev/`, `docs/`, `tests/` and `agent/` be hidden from the public deploy?

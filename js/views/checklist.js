@@ -63,16 +63,19 @@ export function createChecklistView(el, ctx) {
 
   return {
     prepare(params) {
-      if (params.s && /^[cpo]+$/.test(params.s)) {
-        if (params.s.length === CHECKLIST.length && differsFrom(params.s) && window.confirm('This link carries a checklist state. Replace the statuses saved in this browser with it?')) {
-          if (applyCode(params.s)) toast('Checklist state loaded from link');
-        }
+      if (params.s !== undefined) {
+        const code = params.s;
+        if (new RegExp(`^[cpo]{${CHECKLIST.length}}$`).test(code)) {
+          if (differsFrom(code) && window.confirm('This link carries a checklist state. Replace the statuses saved in this browser with it?')) {
+            if (applyCode(code)) toast('Checklist state loaded from link');
+          }
+        } else toast('That share link is not valid for this checklist');
         try { history.replaceState(null, '', '#checklist'); } catch (e) { /* ignore */ }
       }
     },
     enter(params) {
       const t = $('[data-role=title]', el);
-      if (params && params.item) flash($('#ck-' + params.item, el));
+      if (params && /^\d{1,3}$/.test(params.item || '')) flash($('#ck-' + params.item, el));
       else el.scrollTop = 0;
     },
     leave() {},

@@ -296,6 +296,7 @@ details li { margin: 0 0 10px; }
 .sup-detail { border-top: 1px solid var(--line-strong); margin-top: 28px; padding-top: 24px; }
 .sup-detail h3 { font: 600 24px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; margin: 0 0 4px; }
 @media (max-width: 1000px) {
+  .globe-svg { touch-action: pan-y; }   /* a vertical swipe on the map scrolls the page; a horizontal drag still turns the globe */
   .globe-page { grid-template-columns: 1fr; height: auto; }
   .globe-stage { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 12px 0 20px; }
   .globe-svg { width: 100%; max-width: 620px; margin: 0 auto; }

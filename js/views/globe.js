@@ -1,5 +1,5 @@
 // Station 2: the globe. Supplier pins by country, filtered by the part you clicked on the robot.
-import { $, $$, esc, partFor, canonPart, xlinks, SUBSYSTEMS, ORIGIN_REC, CLASSES } from '../ui.js';
+import { $, $$, esc, has, isClass, partFor, canonPart, xlinks, SUBSYSTEMS, ORIGIN_REC, CLASSES } from '../ui.js';
 import { SUPPLIERS, SUP, GROUPS, PART_GROUP, ORIGIN_NAME, ORIGIN_COLOR, STATUS_NAME } from '../data/site-data.js';
 
 const SIZE = 600, RADIUS = 268, C = SIZE / 2;
@@ -67,13 +67,19 @@ export function createGlobeView(el, ctx) {
   function applyParams(params) {
     S.filter = {};
     for (const k of FILTER_KEYS) if (params[k]) S.filter[k] = params[k];
-    if (S.filter.part && !partFor(S.filter.part, S.filter.cls)) delete S.filter.part;
-    if (S.filter.group && !GROUPS[S.filter.group]) delete S.filter.group;
-    if (S.filter.origin && !ORIGIN_NAME[S.filter.origin]) delete S.filter.origin;
+    if (S.filter.cls && !isClass(S.filter.cls)) delete S.filter.cls;
+    if (S.filter.part) {
+      const base = partFor(S.filter.part, S.filter.cls || 'full');
+      if (!base) delete S.filter.part;
+      else if (base.classes && !base.classes.includes(S.filter.cls || 'full')) S.filter.cls = base.classes[0];   // e.g. the waist exists on the X2 and A3 only
+    }
+    if (S.filter.group && !has(GROUPS, S.filter.group)) delete S.filter.group;
+    if (S.filter.origin && !has(ORIGIN_NAME, S.filter.origin)) delete S.filter.origin;
+    if (S.filter.status && !has(STATUS_NAME, S.filter.status)) delete S.filter.status;
     // a part that no supplier lists exactly falls back to every supplier in its group, and says so
     S.fallbackGroup = null;
     if (S.filter.part && !exactMatches(S.filter.part).length) S.fallbackGroup = PART_GROUP[canonPart(S.filter.part)] || null;
-    S.selected = params.sup && SUP[params.sup] ? params.sup : null;
+    S.selected = params.sup && has(SUP, params.sup) ? params.sup : null;
   }
   const query = () => {
     const parts = FILTER_KEYS.filter((k) => S.filter[k]).map((k) => `${k}=${encodeURIComponent(S.filter[k])}`);
@@ -96,7 +102,7 @@ export function createGlobeView(el, ctx) {
       build();
       S.ready = true;
       draw();
-      if (S.pendingFocus) { const f = S.pendingFocus; S.pendingFocus = null; focusOnVisible(f); }
+      if (S.pendingFocus) { S.pendingFocus = null; if (S.selected) rotateTo(SUP[S.selected].lon, SUP[S.selected].lat, 1200); else focusOnVisible(); }
       loop();
     } catch (err) {
       console.error(err);
@@ -117,6 +123,9 @@ export function createGlobeView(el, ctx) {
     const end = () => { S.drag = null; svg.classList.remove('drag'); };
     svg.addEventListener('mousedown', start); window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
     svg.addEventListener('touchstart', start, { passive: true }); svg.addEventListener('touchmove', move, { passive: false }); svg.addEventListener('touchend', end);
+    svg.addEventListener('touchcancel', end);
+    // a keyboard-focused pin must not drift off the horizon while it has focus
+    svg.addEventListener('focusin', () => { if (S.spinning) { S.spinning = false; setSpinBtn(); } });
     S.cleanup = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end); };
   }
   function draw() {
@@ -192,11 +201,11 @@ export function createGlobeView(el, ctx) {
   function partContext() {
     const f = S.filter;
     if (!f.part) return '';
-    const cls = f.cls && CLASSES[f.cls] ? f.cls : 'full';
+    const cls = f.cls && isClass(f.cls) ? f.cls : 'full';
     const p = partFor(f.part, cls);
     if (!p) return '';
     const when = WHEN[p.rec] || 'later';
-    const fb = S.fallbackGroup ? `<p class="note">No supplier is mapped to this exact part, so this shows every ${esc(GROUPS[S.fallbackGroup].name.toLowerCase())} supplier.</p>` : '';
+    const fb = S.fallbackGroup ? `<p class="note">No supplier is mapped to this exact part, so this shows every supplier in its group: ${esc(GROUPS[S.fallbackGroup].name)}.</p>` : '';
     return `<div class="context">
       <div class="tags"><span class="tag">${esc(SUBSYSTEMS[p.sub].name)}</span><span class="tag ${when === 'now' ? 'ok' : ''}">${when === 'now' ? 'Act now' : 'Later'}</span><span class="tag">${esc(ORIGIN_REC[p.rec].name)}</span><span class="tag">${esc(CLASSES[cls].short)}</span></div>
       <p>${esc(p.what)}</p>
@@ -212,9 +221,17 @@ export function createGlobeView(el, ctx) {
   }
   function renderSide() {
     const f = S.filter, list = shown();
-    const cls = f.cls && CLASSES[f.cls] ? f.cls : 'full';
+    const cls = f.cls && isClass(f.cls) ? f.cls : 'full';
     const p = f.part ? partFor(f.part, cls) : null;
-    $('[data-role=title]', el).textContent = p ? p.title : (f.group ? `${GROUPS[f.group].name} suppliers` : (f.status ? STATUS_NAME[f.status] : 'All supplier pins'));
+    // rebuilding the panel destroys the focused button: note which control had focus so it can be given back
+    const ae = document.activeElement;
+    let refocus = null;
+    if (ae && ae !== document.body && el.contains(ae)) {
+      for (const a of ['data-pick', 'data-group', 'data-status', 'data-o', 'data-clear']) {
+        if (ae.hasAttribute && ae.hasAttribute(a)) refocus = `[${a}${ae.getAttribute(a) ? `="${CSS.escape(ae.getAttribute(a))}"` : ''}]`;
+      }
+    }
+    $('[data-role=title]', el).textContent = p ? p.title : f.group ? `${GROUPS[f.group].name} suppliers` : f.status ? STATUS_NAME[f.status] : f.origin ? `${ORIGIN_NAME[f.origin]} suppliers` : 'All supplier pins';
     $('[data-role=count]', el).textContent = `${list.length} of ${SUPPLIERS.length} pins`;
     $('[data-role=context]', el).innerHTML = partContext();
     const active = (k) => (f.group === k ? ' on' : '');
@@ -224,6 +241,7 @@ export function createGlobeView(el, ctx) {
     $('[data-role=list]', el).innerHTML = list.map((s) => `<li><button type="button" class="${S.selected === s.id ? 'sel' : ''}" data-pick="${s.id}"><i class="dot" style="background:${ORIGIN_COLOR[s.origin]}"></i><span>${esc(s.name)}</span><em>${esc(s.loc.split(',').slice(-1)[0].trim())}</em></button></li>`).join('') || '<li class="muted">No pins match this filter.</li>';
     $('[data-role=detail]', el).innerHTML = S.selected ? supplierDetail(SUP[S.selected]) : '';
     $$('[data-o]', el).forEach((b) => b.setAttribute('aria-pressed', String((f.origin || 'all') === b.dataset.o)));
+    if (refocus) { const n = el.querySelector(refocus); if (n) n.focus({ preventScroll: true }); }
   }
   function supplierDetail(s) {
     const parts = s.parts.includes('*') ? 'Every part (the reference platform).' : s.parts.map((id) => { const p = partFor(id, 'full'); return p ? `<button type="button" class="link" data-go="robot?part=${id}">${esc(p.title)}</button>` : ''; }).filter(Boolean).join(', ');
@@ -248,16 +266,21 @@ export function createGlobeView(el, ctx) {
   $('[data-role=origins]', el).addEventListener('click', (e) => {
     const b = e.target.closest('[data-o]'); if (!b) return;
     if (b.dataset.o === 'all') delete S.filter.origin; else S.filter.origin = b.dataset.o;
+    dropHiddenSelection();
     renderSide(); draw(); syncHash();
   });
+  /** A selected supplier that the current filter hides is deselected, so the detail panel never describes a dimmed pin. */
+  function dropHiddenSelection() { if (S.selected && !visible(SUP[S.selected])) S.selected = null; }
   $('[data-role=spin]', el).addEventListener('click', () => { S.spinning = !S.spinning; S.tween = null; setSpinBtn(); });
   el.addEventListener('click', (e) => {
     const pickBtn = e.target.closest('[data-pick]');
     if (pickBtn) { select(pickBtn.dataset.pick, true); return; }
     const g = e.target.closest('[data-group]');
-    if (g) { S.filter = { group: g.dataset.group }; S.fallbackGroup = null; S.selected = null; renderSide(); draw(); syncHash(); focusOnVisible(); return; }
+    // a chip changes the part group or status but keeps the origin filter the user chose
+    const keepOrigin = () => (S.filter.origin ? { origin: S.filter.origin } : {});
+    if (g) { S.filter = Object.assign(keepOrigin(), { group: g.dataset.group }); S.fallbackGroup = null; dropHiddenSelection(); renderSide(); draw(); syncHash(); focusOnVisible(); return; }
     const st = e.target.closest('[data-status]');
-    if (st) { S.filter = { status: st.dataset.status }; S.fallbackGroup = null; S.selected = null; renderSide(); draw(); syncHash(); return; }
+    if (st) { S.filter = Object.assign(keepOrigin(), { status: st.dataset.status }); S.fallbackGroup = null; dropHiddenSelection(); renderSide(); draw(); syncHash(); return; }
     if (e.target.closest('[data-clear]')) { S.filter = {}; S.fallbackGroup = null; S.selected = null; renderSide(); draw(); syncHash(); }
   });
 

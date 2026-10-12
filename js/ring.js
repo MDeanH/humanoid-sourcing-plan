@@ -49,6 +49,7 @@ export function createRing({ scene, ring, stations, onSpinStart, onSpinEnd }) {
     clearTimeout(safety);
     const from = active;
     active = target;
+    measure();                       // a resize during the spin was skipped: take it now
     layoutRest();
     if (anim) { try { anim.cancel(); } catch (e) { /* already gone */ } anim = null; }
     scene.classList.remove('spinning');

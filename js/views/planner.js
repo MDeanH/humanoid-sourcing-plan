@@ -1,6 +1,6 @@
 // Station 6: the full platform planner. The complete 3D tool: four platforms, lineup, color modes, labels,
 // and the live parts planner with the strict above-65% / above-75% score.
-import { $, esc, CLASSES } from '../ui.js';
+import { $, esc, isClass } from '../ui.js';
 
 export function createPlannerView(el) {
   el.innerHTML = `
@@ -31,11 +31,12 @@ export function createPlannerView(el) {
     } catch (err) {
       S.failed = true;
       if (!err || err.code !== 'NO_WEBGL') console.error(err);
-      root.innerHTML = '<p class="planner-error">The 3D planner needs WebGL, which is not available here. The original build planner works the same way: <a href="https://humanoid-build-planner.netlify.app" target="_blank" rel="noopener">humanoid-build-planner.netlify.app</a>.</p>';
+      const why = err && err.code === 'NO_WEBGL' ? 'needs WebGL, which is not available here' : 'could not load';
+      root.innerHTML = `<p class="planner-error">The 3D planner ${why}. The original build planner works the same way: <a href="https://humanoid-build-planner.netlify.app" target="_blank" rel="noopener">humanoid-build-planner.netlify.app</a>.</p>`;
     }
   }
   function apply(params) {
-    const cls = params.cls && CLASSES[params.cls] ? params.cls : null;
+    const cls = params.cls && isClass(params.cls) ? params.cls : null;
     if (cls) S.want.cls = cls;
     S.want.part = params.part || null;
     if (S.viewer) {

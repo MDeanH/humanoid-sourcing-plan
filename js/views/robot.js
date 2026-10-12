@@ -1,5 +1,5 @@
 // Station 1: the robot. The main page. A live 3D model; clicking any part turns the robot, then spins the ring to the globe.
-import { $, $$, esc, partFor, shortName, keySpec, className, daysUntil, CLASSES, SUBSYSTEMS } from '../ui.js';
+import { $, $$, esc, partFor, shortName, keySpec, className, daysUntil, isClass, SUBSYSTEMS } from '../ui.js';
 import { PARTS } from '../data/planner-parts.js';
 import { GROUPS, PART_GROUP } from '../data/site-data.js';
 
@@ -54,7 +54,8 @@ export function createRobotView(el, ctx) {
   function setHint(text) { hint.textContent = text || HINT; }
 
   function showFocus(partId, cls) {
-    if (!partId || !partFor(partId, cls)) { focusEl.hidden = true; S.focusPart = null; return; }
+    const p = partId ? partFor(partId, cls) : null;
+    if (!p || (p.classes && !p.classes.includes(cls))) { focusEl.hidden = true; S.focusPart = null; return; }
     S.focusPart = partId;
     $('[data-role=focusname]', el).textContent = partTitle(partId, cls);
     focusEl.hidden = false;
@@ -72,7 +73,7 @@ export function createRobotView(el, ctx) {
 
   function setSize(size) {
     S.size = size;
-    if (CLASSES[size]) S.classId = size;
+    if (isClass(size)) S.classId = size;
     $$('[data-size]', el).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.size === size)));
     $('[data-role=classname]', el).textContent = size === 'lineup' ? 'All four platforms, true scale' : className(S.classId);
     showFocus(null);
@@ -135,7 +136,9 @@ export function createRobotView(el, ctx) {
     /** Called before the ring spins here (and on first load). */
     prepare(params) {
       ensureLoaded();
-      if (params.cls && CLASSES[params.cls] && params.cls !== S.classId && S.size !== params.cls) setSize(params.cls);
+      // arriving with a platform and/or a part: show that platform (a lineup has no single part to show)
+      const want = params.cls && isClass(params.cls) ? params.cls : S.classId;
+      if (S.size !== want && (params.cls || params.part)) setSize(want);
       showFocus(params.part, S.classId);
     },
     enter(params) {
