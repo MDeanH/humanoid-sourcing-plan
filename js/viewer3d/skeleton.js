@@ -2,6 +2,7 @@
 // aria relationships and carry a per-instance prefix so several viewers can share a page.
 export function skeletonHtml(uid) {
   return `
+<span class="v3d-probe" data-slot="probe" aria-hidden="true"></span>
 <div class="v3d-grid">
   <div class="v3d-viewer">
     <div class="v3d-tbwrap">

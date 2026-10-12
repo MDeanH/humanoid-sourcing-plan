@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { SUBSYSTEMS, ORIGIN_REC } from '../data/planner-parts.js';
 import { CLASSES, ORDER, LINEUP } from '../data/classes.js';
-import { createWorld } from './scene.js';
+import { createWorld, watchPixelRatio } from './scene.js';
 import { applyRobotColors } from './coloring.js';
 import { createCssColors } from './css-colors.js';
 import { createPlanModel, partFor } from './planner-model.js';
@@ -17,13 +17,18 @@ export function createHeroViewer(root, options = {}) {
   const addedClasses = ['v3d', 'v3d-hero'].filter((c) => !root.classList.contains(c));
   addedClasses.forEach((c) => root.classList.add(c));
   const colors = createCssColors(root);
+  const readTokens = () => ({
+    us: colors.read('--us', '#22c55e'), fx: colors.read('--cn', '#ef4444'), unk: colors.read('--v3d-unk', '#a855f7'),
+    ring: colors.read('--line-strong', '#2f3d5c'),
+  });
+  const tokens = readTokens();
   const canvas = document.createElement('canvas');
   canvas.className = 'v3d-canvas';
   canvas.setAttribute('aria-hidden', 'true');
   canvas.style.pointerEvents = 'none';
   let world;
   try {
-    world = createWorld({ canvas, ringColor: colors.read('--line-strong', '#2f3d5c') });
+    world = createWorld({ canvas, ringColor: tokens.ring });
   } catch (err) {
     colors.dispose();
     addedClasses.forEach((c) => root.classList.remove(c));
@@ -34,7 +39,8 @@ export function createHeroViewer(root, options = {}) {
   root.replaceChildren(canvas);
 
   const model = createPlanModel(options.storagePrefix);
-  const palette = { us: colors.read('--us', '#22c55e'), fx: colors.read('--cn', '#ef4444'), unk: colors.read('--v3d-unk', '#a855f7') };
+  const palette = { us: tokens.us, fx: tokens.fx, unk: tokens.unk };
+  let ringColor = tokens.ring;
   const S = {
     size: 'full', active: 'full', mode: MODES.includes(options.mode) ? options.mode : 'sub', W: 0, H: 0,
     offsetX: Math.max(-0.45, Math.min(0.45, Number(options.offsetX) || 0)),
@@ -79,11 +85,18 @@ export function createHeroViewer(root, options = {}) {
     dirty = true;
   }
 
+  /** Planner colors and floor rings come from the design tokens: read again at every measurement, which is when a root that was attached late (or re-themed) shows its real values. */
+  function syncTokens() {
+    const t = readTokens();
+    if (t.ring !== ringColor) { ringColor = t.ring; world.setRingColor(t.ring); dirty = true; }
+    if (t.us !== palette.us || t.fx !== palette.fx || t.unk !== palette.unk) { palette.us = t.us; palette.fx = t.fx; palette.unk = t.unk; recolor(); }
+  }
   function resize() {
     if (destroyed) return;
     const W = root.clientWidth, H = root.clientHeight;
     S.W = W; S.H = H;
     if (!W || !H) { updateRun(); return; }
+    syncTokens();
     world.setSize(W, H);
     frameCamera();
     updateRun();
@@ -121,6 +134,12 @@ export function createHeroViewer(root, options = {}) {
   }
   const onVis = () => updateRun();
   document.addEventListener('visibilitychange', onVis);
+  // moving the window to another monitor changes the pixel density but not the CSS size, so the canvas is resized from here
+  const stopDpr = watchPixelRatio(() => {
+    if (destroyed || !(S.W > 0 && S.H > 0)) return;
+    world.setSize(S.W, S.H);
+    dirty = true; updateRun();
+  });
   // a lost context wipes the prefiltered environment map: rebuild it or the robot comes back dark and flat
   const onRestored = () => { if (destroyed) return; world.rebuildEnvironment(); dirty = true; updateRun(); };
   canvas.addEventListener('webglcontextrestored', onRestored);
@@ -167,6 +186,7 @@ export function createHeroViewer(root, options = {}) {
       rafId = roRaf = 0;
       ro.disconnect(); if (io) io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
+      stopDpr();
       canvas.removeEventListener('webglcontextrestored', onRestored);
       if (mq) { if (mq.removeEventListener) mq.removeEventListener('change', onMq); else if (mq.removeListener) mq.removeListener(onMq); }
       world.dispose();

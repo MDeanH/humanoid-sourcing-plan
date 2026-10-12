@@ -73,7 +73,13 @@ export function createRig({ canvas, stage, camera, frame, hooks = {} }) {
     return { pos: target.clone().addScaledVector(dir, dist), target };
   }
 
+  const finite3 = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
+  /** True when the stage has a size to frame into. A hidden stage is 0 x 0: its aspect ratio is 0/0 and every pose computed from it is NaN. */
+  const canFrame = () => frame.W > 0 && frame.H > 0;
+
   function framing(which) {
+    // Nothing to fit into: answer with the pose the camera already has instead of a NaN one.
+    if (!canFrame()) return { pos: camera.position.clone(), target: controls.target.clone() };
     if (frame.size === 'lineup') { const fit = fitBounds(VIEW_DIRS[which] || VIEW_DIRS.reset); if (fit) return fit; }
     const C = CLASSES[frame.active];
     const h = frame.multi ? 1.8 : C.viewH;
@@ -92,16 +98,23 @@ export function createRig({ canvas, stage, camera, frame, hooks = {} }) {
     return { pos, target };
   }
 
-  /** Move to a named view, gliding unless animate is false or reduced motion is on. */
+  /**
+   * Move to a named view, gliding unless animate is false or reduced motion is on.
+   * Returns false, and leaves the camera alone, when there is no stage size to frame into (hidden viewer): the caller keeps the
+   * wanted view and calls again once the stage has a size.
+   */
   function goTo(which, animate = true) {
+    if (!canFrame()) return false;
     const to = framing(which);
+    if (!finite3(to.pos) || !finite3(to.target)) return false;
     userMoved = false;
-    if (!animate || reduced) {
+    // never glide from a pose that is not a number: a tween between NaN poses keeps the camera NaN for good
+    if (!animate || reduced || !finite3(camera.position) || !finite3(controls.target)) {
       tween = null;
       camera.position.copy(to.pos);
       controls.target.copy(to.target);
       controls.update();
-      return;
+      return true;
     }
     off.copy(camera.position).sub(controls.target);
     tween = {
@@ -109,6 +122,7 @@ export function createRig({ canvas, stage, camera, frame, hooks = {} }) {
       from: sphA.setFromVector3(off).clone(), fromT: controls.target.clone(),
       to: sphB.setFromVector3(off.copy(to.pos).sub(to.target)).clone(), toT: to.target,
     };
+    return true;
   }
   /** Advance the glide. Returns true while it is running. */
   function step(now) {

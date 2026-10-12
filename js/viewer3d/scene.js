@@ -87,6 +87,7 @@ export function createWorld({ canvas, ringColor = '#2f3d5c' }) {
   // floor: soft contact shadow, shadow-catching disc, and thin rings
   const floor = new THREE.Group();
   floor.name = 'v3d-floor';
+  const rings = [];
   {
     const c = document.createElement('canvas'); c.width = c.height = 512;
     const g = c.getContext('2d');
@@ -99,7 +100,7 @@ export function createWorld({ canvas, ringColor = '#2f3d5c' }) {
     ground.rotation.x = -Math.PI / 2; ground.position.y = 0.0005; ground.receiveShadow = true; floor.add(ground);
     for (const r of [0.55, 0.95, 1.35]) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.004, r, 120), new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.85 }));
-      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.002; floor.add(ring);
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.002; floor.add(ring); rings.push(ring);
     }
   }
   scene.add(floor);
@@ -123,6 +124,8 @@ export function createWorld({ canvas, ringColor = '#2f3d5c' }) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
       renderer.setSize(w, h, false);
     },
+    /** Recolor the floor rings (the token they were drawn from changed, or was not readable yet when the world was built). */
+    setRingColor(c) { for (const ring of rings) ring.material.color.set(c); },
     render() { renderer.render(scene, camera); },
     /** Regenerate the environment map. Call after 'webglcontextrestored': the old render target came back empty, which leaves every PBR surface dark and flat. */
     rebuildEnvironment() {
@@ -145,6 +148,30 @@ export function createWorld({ canvas, ringColor = '#2f3d5c' }) {
     },
   };
   return world;
+}
+
+/**
+ * Calls onChange whenever window.devicePixelRatio changes: the window moves to a monitor with another density, or the OS scaling
+ * changes. Neither alters the CSS size of the canvas, so a ResizeObserver never hears of it. The query is re-armed for the new
+ * ratio each time. Returns the function that stops watching.
+ */
+export function watchPixelRatio(onChange) {
+  if (typeof window.matchMedia !== 'function') return () => {};
+  let list = null, handler = null, stopped = false;
+  const disarm = () => {
+    if (list && handler) { if (list.removeEventListener) list.removeEventListener('change', handler); else if (list.removeListener) list.removeListener(handler); }
+    list = handler = null;
+  };
+  const arm = () => {
+    disarm();
+    const dpr = window.devicePixelRatio || 1;
+    // a window around the current ratio (not an exact match) so it matches however the browser rounds the value
+    list = window.matchMedia(`(min-resolution: ${(dpr - 0.001).toFixed(4)}dppx) and (max-resolution: ${(dpr + 0.001).toFixed(4)}dppx)`);
+    handler = () => { if (stopped) return; arm(); onChange(); };
+    if (list.addEventListener) list.addEventListener('change', handler); else if (list.addListener) list.addListener(handler);
+  };
+  arm();
+  return () => { stopped = true; disarm(); };
 }
 
 /** True when a WebGL2 context can be created (three.js r17x+ needs WebGL2). The probe context is released at once. */

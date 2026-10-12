@@ -5,7 +5,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { SUBSYSTEMS, ORIGIN_REC } from '../data/planner-parts.js';
 import { CLASSES, ORDER, LINEUP } from '../data/classes.js';
 import { PRESETS } from '../data/bom.js';
-import { createWorld } from './scene.js';
+import { createWorld, watchPixelRatio } from './scene.js';
 import { applyRobotColors, applyXray, recolorMesh, highlightMesh } from './coloring.js';
 import { createCssColors } from './css-colors.js';
 import { createLabels } from './labels.js';
@@ -20,17 +20,24 @@ const TABS = ['details', 'calc', 'parts'];
 const VIEWS = ['reset', 'front', 'side', 'back'];
 const AUTO_XRAY = ['jetson', 'cpu', 'imu', 'bms'];
 const inLayout = (size, cls) => (LINEUP[size] ? cls in LINEUP[size] : cls === size);
+const PHONE_MAX = 720;      // a stage narrower than this gets the phone layout
+const STACK_MIN = 900;      // below this root width the side panel always goes under the stage
 
 export function createFullViewer(root, options = {}) {
   const uid = 'v3d-' + Math.random().toString(36).slice(2, 8);
   const addedClasses = ['v3d', 'v3d-full'].filter((c) => !root.classList.contains(c));
   addedClasses.forEach((c) => root.classList.add(c));
   const colors = createCssColors(root);
+  const readTokens = () => ({
+    us: colors.read('--us', '#22c55e'), fx: colors.read('--cn', '#ef4444'), unk: colors.read('--v3d-unk', '#a855f7'),
+    ring: colors.read('--line-strong', '#2f3d5c'),
+  });
+  const tokens = readTokens();
   const canvas = document.createElement('canvas');
   canvas.className = 'v3d-canvas';
   let world;
   try {
-    world = createWorld({ canvas, ringColor: colors.read('--line-strong', '#2f3d5c') });
+    world = createWorld({ canvas, ringColor: tokens.ring });
   } catch (err) {
     colors.dispose();
     addedClasses.forEach((c) => root.classList.remove(c));
@@ -51,6 +58,7 @@ export function createFullViewer(root, options = {}) {
     chip: root.querySelector('.v3d-selchip'), toolbar: root.querySelector('.v3d-toolbar'), cue: root.querySelector('.v3d-scrollcue'),
     density: root.querySelector('[data-role="density"]'), rotate: root.querySelector('[data-v3d-act="rotate"]'),
     xray: root.querySelector('[data-v3d-act="xray"]'),
+    probe: root.querySelector('[data-slot="probe"]'),
     sizeBtns: [...root.querySelectorAll('[data-size]')], modeBtns: [...root.querySelectorAll('[data-mode]')],
     viewBtns: [...root.querySelectorAll('[data-v3d-act="view"]')], tabs: [...root.querySelectorAll('[data-tab]')],
     panels: [...root.querySelectorAll('[data-panel]')],
@@ -64,7 +72,8 @@ export function createFullViewer(root, options = {}) {
 
   // ---------------------------------------------------------------- state
   const model = createPlanModel(options.storagePrefix);
-  const palette = { us: colors.read('--us', '#22c55e'), fx: colors.read('--cn', '#ef4444'), unk: colors.read('--v3d-unk', '#a855f7') };
+  const palette = { us: tokens.us, fx: tokens.fx, unk: tokens.unk };
+  let ringColor = tokens.ring;
   const S = {
     size: 'full', active: 'full', mode: 'sub', selected: null, density: 'all', hidden: new Set(), xray: false,
     W: 0, H: 0, phone: false, stack: false, multi: false, chipH: 0, scoreOpen: false, tab: 'details', view: 'reset',
@@ -73,6 +82,7 @@ export function createFullViewer(root, options = {}) {
   let reduced = !!(mq && mq.matches);
   let destroyed = false, userPaused = false, inView = true, rafId = 0, roRaf = 0, lastT = 0;
   let dirty = true, layoutDirty = true, cssDirty = true, firstFrame = true;
+  let needsFrame = false;                              // the wanted camera view could not be set yet (no stage size): do it at the next measurement
   let down = null;
   let lastW = 0, lastH = 0;                            // last measured stage size (S.W / S.H are 0 while hidden)
   let densityInit = false, densityTouched = false;     // label density default follows the first real measurement
@@ -107,6 +117,8 @@ export function createFullViewer(root, options = {}) {
   const legendKey = (p, cls) => (S.mode === 'origin' ? 'o:' + p.rec : S.mode === 'calc' ? 'c:' + model.originOf(p, cls) : 's:' + p.sub);
   const invalidate = () => { dirty = true; layoutDirty = true; };
   const activeRobot = () => world.robots[S.active];
+  /** Put the camera on the current view. With no stage size yet (hidden viewer) it is remembered and done by the next resize(). */
+  const frameCamera = (animate) => { needsFrame = !rig.goTo(S.view, animate); };
 
   // keep keyboard focus on the equivalent control after a panel re-render
   function keepFocus(fn) {
@@ -252,6 +264,9 @@ export function createFullViewer(root, options = {}) {
     tagW.clear();
     cssDirty = true;
   }
+  // onSelect follows the selection. A platform switch alone is reported by onClassChange, so it does not repeat as onSelect(null, cls);
+  // the same part ending up selected on another platform is a different selection and does fire.
+  const selectionChanged = (prevSel, prevCls) => S.selected !== prevSel || (S.selected !== null && S.active !== prevCls);
   function setSize(sz, activeCls, { initial = false } = {}) {
     if (!SIZES.includes(sz)) sz = 'full';
     const prevActive = S.active, prevSize = S.size, prevSel = S.selected;
@@ -268,15 +283,15 @@ export function createFullViewer(root, options = {}) {
     labels.refreshText(S.active);
     labels.refreshMeta(S.active, modeColor, legendKey);
     canvas.setAttribute('aria-label', `Rotatable 3D model of the ${CLASSES[S.active].name.toLowerCase()} ${CLASSES[S.active].kind === 'quad' ? 'quadruped' : 'humanoid'} reference robot (${CLASSES[S.active].short})`);
-    if (S.W) rig.goTo('reset', false);
     S.view = 'reset';
+    frameCamera(false);
     el.viewBtns.forEach((b) => b.setAttribute('aria-pressed', 'false'));
     renderPlanner(); renderDetails(); renderPartList(); renderLegend(); renderActive();
     applySelection(S.selected, true);
     invalidate();
     if (!initial) {
       if (S.active !== prevActive || S.size !== prevSize) fire(cbOnClass, S.active, S.size);
-      if (S.selected !== prevSel || S.active !== prevActive) fire(cbOnSelect, S.selected, S.active);
+      if (selectionChanged(prevSel, prevActive)) fire(cbOnSelect, S.selected, S.active);
     }
   }
   function setMode(m) {
@@ -321,7 +336,7 @@ export function createFullViewer(root, options = {}) {
     S.selected = id || null;
     applySelection(S.selected, !!opts.noTab);
     if (opts.tab && TABS.includes(opts.tab)) showTab(opts.tab);
-    if (S.selected !== prevSel || S.active !== prevCls) fire(cbOnSelect, S.selected, S.active);
+    if (selectionChanged(prevSel, prevCls)) fire(cbOnSelect, S.selected, S.active);
   }
 
   // ---------------------------------------------------------------- tabs and views
@@ -338,7 +353,7 @@ export function createFullViewer(root, options = {}) {
     el.rotate.setAttribute('aria-pressed', 'false');
     S.view = which;
     el.viewBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === which && which !== 'reset')));
-    rig.goTo(which, true);
+    frameCamera(true);
     invalidate();
   }
   const scrollToSide = () => { if (S.stack || S.phone) el.side.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); };
@@ -443,6 +458,8 @@ export function createFullViewer(root, options = {}) {
     sibs[j].focus(); sibs[j].click(); e.preventDefault();
   });
   on(el.toolbar, 'scroll', () => updateCue(), { passive: true });
+  // the round arrow at the edge of a scrolling toolbar looks like a button, so it works as one (a mouse has no swipe to reach the rest)
+  on(el.cue, 'click', () => { el.toolbar.scrollBy({ left: Math.max(120, el.toolbar.clientWidth * 0.7), behavior: reduced ? 'auto' : 'smooth' }); });
 
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function pickAt(cx, cy) {
@@ -454,11 +471,11 @@ export function createFullViewer(root, options = {}) {
     ray.setFromCamera(ndc, world.camera);
     const targets = [];
     for (const r of Object.values(world.robots)) if (r.group.visible) targets.push(r.group);
-    const hits = ray.intersectObjects(targets, true).filter((h) => h.object.userData.partId && hasPart(h.object.userData.cls, h.object.userData.partId) && !(S.xray && h.object.userData.shell));
+    const hits = ray.intersectObjects(targets, true).filter((h) => h.object.userData.partId && hasPart(h.object.userData.cls, h.object.userData.partId) && !(S.xray && h.object.userData.casing));
     if (!hits.length) { select(null); return; }
     const h = hits[0].object.userData;
-    if (S.multi && h.cls !== S.active) setSize(S.size, h.cls);
-    select(h.partId);
+    // one step, so the host hears one onSelect (and one onClassChange) for the click, never a selection under the old part list
+    select(h.partId, S.multi && h.cls !== S.active ? { classId: h.cls } : {});
   }
   // click-to-select on the model: ignore drags and multi-touch gestures
   on(canvas, 'pointerdown', (e) => { down = e.isPrimary ? { x: e.clientX, y: e.clientY } : null; });
@@ -476,21 +493,34 @@ export function createFullViewer(root, options = {}) {
     const tb = el.toolbar;
     el.cue.classList.toggle('is-done', tb.scrollWidth - tb.clientWidth - tb.scrollLeft < 6);
   }
+  /** Planner colors and floor rings come from the design tokens. They are read again at every measurement, which is when a root that was attached late (or re-themed) shows its real values. */
+  function syncTokens() {
+    const t = readTokens();
+    if (t.ring !== ringColor) { ringColor = t.ring; world.setRingColor(t.ring); invalidate(); }
+    if (t.us !== palette.us || t.fx !== palette.fx || t.unk !== palette.unk) {
+      palette.us = t.us; palette.fx = t.fx; palette.unk = t.unk;
+      refreshColors(); renderDetails();
+    }
+  }
   function resize() {
     if (destroyed) return;
     // Hidden or detached (display:none, zero width): there is nothing to measure, so keep the last layout flags instead of
     // reading "0 px wide" as a phone.
     const rw = root.clientWidth;
     if (!rw) { S.W = el.stage.clientWidth; S.H = el.stage.clientHeight; updateRun(); return; }
+    syncTokens();
     // The stacked layout is decided by the root alone and applied first: in the side-by-side layout a narrow root leaves the
-    // stage 0 px wide, and it only gets its real size once the grid has collapsed to one column.
-    const stack = rw < 900;
+    // stage 0 px wide, and it only gets its real size once the grid has collapsed to one column. The panel sits beside the stage
+    // only while the stage stays wide enough for the full toolbar and labels (PHONE_MAX); the phone toolbar scrolls sideways, which
+    // a mouse cannot do, so it is never used next to a side panel.
+    const sideW = el.probe ? el.probe.offsetWidth : 0;
+    const stack = rw < Math.max(STACK_MIN, PHONE_MAX + (sideW || 400));
     S.stack = stack;
     root.dataset.stack = String(stack);
     const w = el.stage.clientWidth, h = el.stage.clientHeight;
     S.W = w; S.H = h;
     if (!w || !h) { updateRun(); return; }
-    const phone = w < 720;
+    const phone = w < PHONE_MAX;
     const changed = w !== lastW || h !== lastH || phone !== S.phone;
     lastW = w; lastH = h;
     S.phone = phone;
@@ -507,11 +537,18 @@ export function createFullViewer(root, options = {}) {
     el.leaders.setAttribute('viewBox', `0 0 ${w} ${h}`);
     labels.resetWidths();
     tagW.clear();
-    if (changed && !rig.userMoved) rig.goTo(S.view, false);
+    // a view requested while there was no size (needsFrame) is applied even when the user has moved the camera since: asking for it reset that
+    if (needsFrame || (changed && !rig.userMoved)) frameCamera(false);
     updateCue();
     invalidate();
     updateRun();
   }
+  // moving the window to another monitor changes the pixel density but not the CSS size, so the canvas is resized from here
+  const stopDpr = watchPixelRatio(() => {
+    if (destroyed || !(S.W > 0 && S.H > 0)) return;      // hidden: the next measurement picks the ratio up
+    world.setSize(S.W, S.H);
+    invalidate();
+  });
   const canRun = () => !destroyed && inView && !document.hidden && !userPaused && S.W > 0 && S.H > 0;
   function updateRun() {
     if (destroyed) return;
@@ -626,6 +663,7 @@ export function createFullViewer(root, options = {}) {
       for (const id of timers) clearTimeout(id);
       timers.clear();
       ro.disconnect(); if (io) io.disconnect();
+      stopDpr();
       if (mq) { if (mq.removeEventListener) mq.removeEventListener('change', onMq); else if (mq.removeListener) mq.removeListener(onMq); }
       for (const off of offs) off();
       offs.length = 0;

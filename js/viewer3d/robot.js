@@ -96,7 +96,9 @@ export function buildRobot(cls) {
   function reg(mesh, partId, variant, mat, extra = {}) {
     add(mesh, mat, Object.assign({ partId, variant }, extra));
     (robot.parts[partId] ||= []).push(mesh);
-    if (variant === 'shell') { mesh.userData.shell = true; robot.shells.push(mesh); }
+    // shell: finished casing that goes see-through in X-ray. casing: the body shell proper, which is click-through in X-ray so the
+    // parts inside can be picked. The battery pack has a shell finish too, but it is a part in its own right and stays pickable.
+    if (variant === 'shell') { mesh.userData.shell = true; mesh.userData.casing = partId === 'frame'; robot.shells.push(mesh); }
     return mesh;
   }
   function deco(mesh, mat, shell = false) { add(mesh, mat, { variant: 'fixed', shell }); if (shell) robot.shells.push(mesh); return mesh; }

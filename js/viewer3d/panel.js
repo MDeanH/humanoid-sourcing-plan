@@ -161,7 +161,7 @@ export function scorebarHtml(model, cls, sc, open, uid) {
       ${ex ? '<span class="v3d-example">Example plan</span>' : ''}<span class="v3d-chev" aria-hidden="true"></span>
     </button>
     <button type="button" class="v3d-score-edit" data-v3d-act="edit">Edit plan</button>
-    <p class="v3d-score-more" id="${uid}-more"${open ? '' : ' hidden'}>${ex ? `Example: US-made joints, frame, and harness on the ${esc(C.short)} platform. ` : ''}Share of component cost that is US-made, with relative placeholder costs. Needs &gt;65% for items delivered 2024–2028 and &gt;75% from 2029; exactly 65.0% fails. Unknown origin counts as foreign.</p>`;
+    <div class="v3d-score-more" id="${uid}-more"${open ? '' : ' hidden'}><p>${ex ? `Example: US-made joints, frame, and harness on the ${esc(C.short)} platform. ` : ''}Share of component cost that is US-made, with relative placeholder costs. Needs &gt;65% for items delivered 2024–2028 and &gt;75% from 2029; exactly 65.0% fails. Unknown origin counts as foreign.</p></div>`;
 }
 
 export function partListHtml(cx, q) {

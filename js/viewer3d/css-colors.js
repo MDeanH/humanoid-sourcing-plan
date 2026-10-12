@@ -5,11 +5,19 @@ export function createCssColors(root) {
   cv.width = cv.height = 1;
   let ctx = null;
   try { ctx = cv.getContext('2d', { willReadFrequently: true }); } catch (e) { ctx = null; }
-  const cache = new Map();
+  // Parsing a color string goes through the canvas, so the result is cached per string. The tokens themselves are always read
+  // fresh: a theme switch or a root that was attached after creation shows up on the next read.
+  const parsed = new Map();
   const hex2 = (n) => n.toString(16).padStart(2, '0');
 
   function resolve(css) {
     if (!css) return null;
+    if (parsed.has(css)) return parsed.get(css);
+    const out = parse(css);
+    parsed.set(css, out);
+    return out;
+  }
+  function parse(css) {
     if (ctx) {
       try {
         ctx.fillStyle = '#010203';
@@ -27,17 +35,17 @@ export function createCssColors(root) {
   }
 
   return {
-    /** Token value as '#rrggbb', or the fallback when the variable is missing or unparsable. */
+    /**
+     * Token value as '#rrggbb', or the fallback when the variable is missing or unparsable.
+     * A root that is not attached to the document has no computed style (every custom property reads as empty), so the document
+     * element stands in for it until the root is connected; the viewer re-reads the tokens at its first measurement after that.
+     */
     read(name, fallback) {
-      const key = name + '|' + fallback;
-      if (cache.has(key)) return cache.get(key);
       let raw = '';
-      try { raw = getComputedStyle(root).getPropertyValue(name).trim(); } catch (e) { raw = ''; }
-      const out = resolve(raw) || resolve(fallback) || fallback;
-      cache.set(key, out);
-      return out;
+      try { raw = getComputedStyle(root.isConnected ? root : document.documentElement).getPropertyValue(name).trim(); } catch (e) { raw = ''; }
+      return resolve(raw) || resolve(fallback) || fallback;
     },
-    refresh() { cache.clear(); },
-    dispose() { cache.clear(); ctx = null; if (cv) { cv.width = cv.height = 0; } cv = null; },
+    refresh() { parsed.clear(); },
+    dispose() { parsed.clear(); ctx = null; if (cv) { cv.width = cv.height = 0; } cv = null; },
   };
 }
