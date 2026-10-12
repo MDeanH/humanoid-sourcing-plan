@@ -104,7 +104,7 @@ export const SUPPLIERS = [
 ];
 export const SUP = Object.fromEntries(SUPPLIERS.map(s => [s.id, s]));
 export const ORIGIN_NAME = { us: 'US', cn: 'China', third: 'Third country' };
-export const ORIGIN_COLOR = { us: '#22c55e', cn: '#f87171', third: '#f59e0b' };
+export const ORIGIN_COLOR = { us: 'var(--us)', cn: 'var(--cn)', third: 'var(--third)' };
 export const STATUS_NAME = { named: 'Named in the notes', inferred: 'Reported for AgiBot, unverified', candidate: 'Candidate, not contacted', avoid: 'Avoid for this build', site: 'Your build site' };
 
 export const STEPS = [

@@ -12,7 +12,12 @@ export function createChecklistView(el, ctx) {
       <div>
         <p class="eyebrow">Checklist</p>
         <h2 class="h1" data-role="title" tabindex="-1">US compliance checklist</h2>
-        <p class="lede">What a new robot model needs before it can be marketed or sold in the US. Click a status to cycle it: Confirmed, In progress, Open. Statuses are saved in this browser. The tags show how settled the rule is: <span class="tag ok">FCC-confirmed</span> matches the FCC FAQ, <span class="tag gen">General guidance</span> is standard practice to confirm with counsel or a test lab, and <span class="tag open">Open question</span> is unsettled.</p>
+        <p class="lede">What a new robot model needs before it can be marketed or sold in the US. Click a status to cycle it: Confirmed, In progress, Open. Statuses are saved in this browser.</p>
+        <dl class="legend">
+          <div><dt><span class="tag ok">FCC-confirmed</span></dt><dd>matches the FCC FAQ</dd></div>
+          <div><dt><span class="tag gen">General guidance</span></dt><dd>standard practice; confirm with counsel or a test lab</dd></div>
+          <div><dt><span class="tag open">Open question</span></dt><dd>unsettled</dd></div>
+        </dl>
       </div>
       <div class="actions">
         <button type="button" class="btn sm" data-role="share">Copy share link</button>

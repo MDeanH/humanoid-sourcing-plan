@@ -4,8 +4,8 @@ import { PARTS } from '../data/planner-parts.js';
 import { GROUPS, PART_GROUP } from '../data/site-data.js';
 
 const SIZES = [['full', 'A2'], ['compact', 'X2'], ['a3', 'A3'], ['d1', 'D1'], ['lineup', 'Lineup']];
-const coarse = () => window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-const HINT_TEXT = () => (coarse() ? 'Tap a node to trace its suppliers' : 'Drag to turn · click any node to trace its suppliers');
+const short = () => window.matchMedia && window.matchMedia('(pointer: coarse), (max-width: 700px)').matches;
+const HINT_TEXT = () => (short() ? 'Tap a node to trace its suppliers' : 'Drag to turn · click any node to trace its suppliers');
 const HINT = HINT_TEXT();
 const wide = () => window.matchMedia('(min-width: 1000px)').matches;
 

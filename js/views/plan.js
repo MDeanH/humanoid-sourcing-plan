@@ -3,8 +3,6 @@ import { esc, xlinks, daysUntil } from '../ui.js';
 import { STEPS, GROUPS } from '../data/site-data.js';
 import { counts, subscribe } from '../checklist-store.js';
 
-const BAR_COLORS = { joints: '#f08a24', ai: '#8b5cf6', cpu: '#8b5cf6', sensors: '#2f7cf6', battery: '#eab308', frame: '#64748b', harness: '#14b8a6', other: '#9ca3af' };
-
 const CONSTRAINTS = [
   { rule: 'FCC Covered List', sub: 'DA 26-786, July 28, 2026', restricts: 'New FCC authorization for foreign-produced advanced robotic devices. To count as domestic, the robot must be manufactured in the US, and domestic components must be more than 65% of component cost through 2028 and more than 75% from 2029 (48 CFR 25.101(a)).', not: 'Does not look at software origin or company nationality. Does not ban the components themselves. The COTS end-product waiver does not apply. Sales only to the government are exempt.', impact: ['Gatekeeper', 'Drives every sourcing choice on this site.'], link: ['checklist?item=1', 'Checklist 1'] },
   { rule: 'Buy American valuation', sub: '48 CFR 25.003', restricts: 'How component cost is measured. A component is an article built directly into the end product. Bought parts count at acquisition cost plus freight plus duty. Parts you make count at manufacturing cost plus allocable overhead, with no profit.', not: 'Final assembly labor does not count. A component of unknown origin is not given the benefit of the doubt: it counts as foreign.', impact: ['Method', 'A purchased joint module is wholly domestic or wholly foreign.'], link: ['checklist?item=6', 'Checklist 6'] },
@@ -16,7 +14,7 @@ const CONSTRAINTS = [
 export function createPlanView(el) {
   const shareRows = Object.entries(GROUPS).map(([k, g]) => `
     <div class="bar-row"><button type="button" class="link plain" data-go="globe?group=${k}">${esc(g.name)}</button>
-      <div class="bar"><i style="width:${g.share}%;background:${BAR_COLORS[k]}"></i></div><span class="mono">${g.share}%</span></div>`).join('');
+      <div class="bar"><i style="width:${g.share}%;background:var(--text);opacity:${(0.35 + (g.share / 60) * 0.65).toFixed(2)}"></i></div><span class="mono">${g.share}%</span></div>`).join('');
 
   el.innerHTML = `
   <div class="page">

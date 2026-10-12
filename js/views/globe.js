@@ -43,7 +43,8 @@ export function createGlobeView(el, ctx) {
   </div>`;
 
   const svg = $('[data-role=svg]', el);
-  const S = { rot: [-95, -28], filter: {}, selected: null, spinning: true, active: false, drag: null, land: null, proj: null, path: null, tween: null, raf: 0, last: 0, ready: false, fallbackGroup: null };
+  // open facing the Americas, where the first rows of the list (the US options) have their pins
+  const S = { rot: [92, -30], filter: {}, selected: null, spinning: true, active: false, drag: null, land: null, proj: null, path: null, tween: null, raf: 0, last: 0, ready: false, fallbackGroup: null };
 
   /* ---------------------------------------------------------------- filtering */
   function exactMatches(partId) { const id = canonPart(partId); return SUPPLIERS.filter((s) => s.parts.includes(id)); }
@@ -102,7 +103,7 @@ export function createGlobeView(el, ctx) {
   }
   function build() {
     svg.innerHTML = `<circle class="sphere" cx="${C}" cy="${C}" r="${RADIUS}"/><path class="grat" data-r="grat"/><path class="land" data-r="land"/><g data-r="pins">${SUPPLIERS.map((s) => `
-      <g class="gpin" data-sup="${s.id}" tabindex="0" role="button" aria-label="${esc(s.name)}, ${esc(s.loc)}"><circle class="halo" r="11" stroke="${ORIGIN_COLOR[s.origin]}"/><circle class="dot" r="5" fill="${ORIGIN_COLOR[s.origin]}"/><text x="10" y="3.5">${esc(s.name)}</text></g>`).join('')}</g>`;
+      <g class="gpin" data-sup="${s.id}" tabindex="0" role="button" aria-label="${esc(s.name)}, ${esc(s.loc)}"><circle class="halo" r="11" style="stroke:${ORIGIN_COLOR[s.origin]}"/><circle class="dot" r="5" style="fill:${ORIGIN_COLOR[s.origin]}"/><text x="10" y="3.5">${esc(s.name)}</text></g>`).join('')}</g>`;
     $$('.gpin', svg).forEach((g) => {
       const pick = (e) => { e.stopPropagation(); select(g.dataset.sup, true); };
       g.addEventListener('click', pick);

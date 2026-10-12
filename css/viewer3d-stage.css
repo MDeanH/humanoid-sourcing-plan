@@ -69,7 +69,8 @@
   position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
   font: 500 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text);
   opacity: 0; transition: opacity 0.2s var(--ease);
-  text-shadow: 0 0 2px var(--bg), 0 0 5px var(--bg), 0 0 12px color-mix(in srgb, var(--bg) 85%, transparent);
+  /* a tight black halo keeps the text legible where it crosses the light robot body */
+  text-shadow: 0 0 1px #000, 0 0 3px #000, 0 0 6px #000, 0 0 12px #000, 0 0 18px rgba(0, 0, 0, 0.9);
 }
 .v3d-stage .v3d-hs.is-r .v3d-hs-lbl, .v3d-stage .v3d-hs:not(.is-l) .v3d-hs-lbl { left: calc(50% + 12px); }
 .v3d-stage .v3d-hs.is-l .v3d-hs-lbl { right: calc(50% + 12px); text-align: right; }
@@ -80,8 +81,8 @@
 .v3d-stage .v3d-hs.is-r .v3d-hs-lbl::before, .v3d-stage .v3d-hs:not(.is-l) .v3d-hs-lbl::before { left: -9px; }
 .v3d-stage .v3d-hs.is-l .v3d-hs-lbl::before { right: -9px; }
 
-.v3d-stage .v3d-hs-nm { opacity: 0.72; transition: opacity 0.2s var(--ease); }
-.v3d-stage .v3d-hs-ks { margin-left: 12px; color: var(--text-dim); opacity: 0.8; }
+.v3d-stage .v3d-hs-nm { opacity: 1; transition: opacity 0.2s var(--ease); }
+.v3d-stage .v3d-hs-ks { margin-left: 12px; color: var(--text); opacity: 0.85; }
 .v3d-stage .v3d-hs.is-l .v3d-hs-ks { margin-left: 12px; }
 .v3d-stage .v3d-hs.is-show .v3d-hs-lbl { opacity: 1; }
 
@@ -111,7 +112,8 @@
 .v3d-stage .v3d-cp:focus, .v3d-stage .v3d-cp:focus-visible { outline: none; }
 .v3d-stage .v3d-cp-nm, .v3d-stage .v3d-cp-ks {
   font: 500 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
-  text-shadow: 0 0 2px var(--bg), 0 0 5px var(--bg), 0 0 12px color-mix(in srgb, var(--bg) 85%, transparent);
+  /* a tight black halo keeps the text legible where it crosses the light robot body */
+  text-shadow: 0 0 1px #000, 0 0 3px #000, 0 0 6px #000, 0 0 12px #000, 0 0 18px rgba(0, 0, 0, 0.9);
 }
 .v3d-stage .v3d-cp-nm { opacity: 0.8; transition: opacity 0.2s var(--ease); }
 .v3d-stage .v3d-cp-ks { color: var(--text-dim); opacity: 0.7; transition: opacity 0.2s var(--ease); }
