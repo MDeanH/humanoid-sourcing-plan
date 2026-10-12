@@ -99,6 +99,7 @@ export function createStageViewer(root, options = {}) {
   let dirty = true, layoutDirty = true, rayDirty = false;
   let yaw = POSE, appliedYaw = NaN, vel = 0, turn = 0, resumeAt = 0;
   let hoverIn = false, dragging = false, touching = false, focusIn = false;
+  let simulating = false;                                // debug.advance(): step the motion without drawing
   let tween = null, offAnim = null, drag = null, suppressClick = false, suppressTimer = 0;
   let ptrHover = null, focusHover = null, extHot = null, lineupHover = null, reportedHover = null;
   const ptr = { x: 0, y: 0, type: 'mouse', inside: false, onHs: false };
@@ -108,7 +109,8 @@ export function createStageViewer(root, options = {}) {
   let cw = 7.4;                                          // px advance of one label character
   const fire = (fn, ...a) => { if (typeof fn !== 'function') return; try { fn(...a); } catch (e) { console.error(e); } };
   const on = (t, type, fn, opt) => { t.addEventListener(type, fn, opt); offs.push(() => t.removeEventListener(type, fn, opt)); };
-  const now0 = () => performance.now();
+  let simOffset = 0;                                     // ms the debug clock (debug.advance) is ahead of the real one; 0 in production
+  const now0 = () => performance.now() + simOffset;
 
   const modeColor = (p, cls) => (S.mode === 'origin' ? ORIGIN_REC[p.rec].color : S.mode === 'calc' ? palette[model.originOf(p, cls)] : SUBSYSTEMS[p.sub].color);
   const recolor = () => {
@@ -190,21 +192,13 @@ export function createStageViewer(root, options = {}) {
   }
   function applyPulse() {
     clearPulse();
-    if (lineupMode()) { lineupGlow(); return; }
+    if (lineupMode()) { dirty = true; return; }
     const r = world.robots[S.active];
     if (!r || !r.group.visible) return;
     for (const id of new Set([hoverId(), extHot])) {
       if (!id) continue;
       for (const m of r.parts[id] || []) { pulse.push(m); highlightMesh(m, pulseLevel()); }
     }
-    dirty = true;
-  }
-  /** Lineup: the robot under the pointer gets a faint glow on all its parts. */
-  function lineupGlow() {
-    if (!lineupHover) { dirty = true; return; }
-    const r = world.robots[lineupHover];
-    if (!r) return;
-    for (const list of Object.values(r.parts)) for (const m of list) { if (m.userData.variant === 'fixed') continue; pulse.push(m); highlightMesh(m, 0.12); }
     dirty = true;
   }
   const hoverId = () => (ptrHover !== null ? ptrHover : focusHover);
@@ -252,7 +246,9 @@ export function createStageViewer(root, options = {}) {
     const list = partsFor(cls).map((p0) => partFor(p0.id, cls)).filter((p) => r.anchors[p.id])
       .sort((a, b) => r.anchors[b.id].pos.y - r.anchors[a.id].pos.y || r.anchors[a.id].pos.x - r.anchors[b.id].pos.x);
     list.forEach((p, i) => {
-      const ks = keySpec(p, cls), nm = shortName(p);
+      const nm = shortName(p);
+      let ks = keySpec(p, cls);
+      if (ks && nm.toLowerCase().includes(ks.toLowerCase())) ks = '';      // "Jetson Orin 64 GB" + "64 GB" says it twice
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'v3d-hs' + (p.key ? ' is-key' : '');
       b.dataset.part = p.id;
@@ -284,8 +280,8 @@ export function createStageViewer(root, options = {}) {
     if (lineupMode()) {
       for (const c of captions) {
         const r = world.robots[c.cls]; if (!r) continue;
-        vA.set(r.group.position.x, 0, 0).project(cam);
-        const x = Math.round(((vA.x + 1) / 2 * W) * 10) / 10, y = Math.round(((1 - vA.y) / 2 * H + 14) * 10) / 10;
+        vA.set(r.group.position.x, 0, 0.32).project(cam);          // just in front of the feet
+        const x = Math.round(((vA.x + 1) / 2 * W) * 10) / 10, y = Math.round(Math.min((1 - vA.y) / 2 * H + 8, H - 48) * 10) / 10;
         if (x !== c.x || y !== c.y) { c.x = x; c.y = y; c.el.style.transform = `translate(${x}px, ${y}px) translateX(-50%)`; }
       }
       return;
@@ -307,10 +303,10 @@ export function createStageViewer(root, options = {}) {
       const a = it.anchor;
       vA.copy(a.pos).applyMatrix4(mw);
       let facing = null;
-      if (a.normal) { vN.copy(a.normal).transformDirection(mw); facing = vN.dot(vB.copy(camPos).sub(vA).normalize()); }
+      if (a.normal && !it.inside) { vN.copy(a.normal).transformDirection(mw); facing = vN.dot(vB.copy(camPos).sub(vA).normalize()); }
       vB.copy(vA).project(cam);
       it.sx = (vB.x + 1) / 2 * W; it.sy = (1 - vB.y) / 2 * H;
-      // an inside part has no surface normal: it is shown through the see-through shells
+      // an inside part is seen through the see-through shells from every side: it is never treated as back-facing
       it.a = vB.z > 1 || it.sx < -6 || it.sx > W + 6 || it.sy < -6 || it.sy > H + 6 ? 0
         : facing === null ? 1 : clamp((facing - FACING_HIDE) / (FACING_FULL - FACING_HIDE), 0, 1);
       it.vis = it.a > 0;
@@ -393,7 +389,16 @@ export function createStageViewer(root, options = {}) {
     return hits.length ? hits[0].object.userData : null;
   }
   function doRay() {
-    if (!ptr.inside || ptr.type === 'touch' || dragging || ptr.onHs || !interactive) return;
+    if (!ptr.inside || ptr.type === 'touch' || dragging || !interactive) return;
+    if (ptr.onHs) {
+      // the pointer rests on a hotspot that may since have moved away (inertia) or turned to the back
+      const it = ptrHover !== null ? byId.get(ptrHover) : null;
+      if (it && it.vis) {
+        const rc = canvas.getBoundingClientRect();
+        if (Math.abs(rc.left + it.sx - ptr.x) <= 12 && Math.abs(rc.top + it.sy - ptr.y) <= 12) return;
+      }
+      ptr.onHs = false;
+    }
     const u = hitAt(ptr.x, ptr.y);
     if (lineupMode()) {
       const c = u ? u.cls : null;
@@ -446,8 +451,12 @@ export function createStageViewer(root, options = {}) {
       }
     }
     if (drag && e.pointerId === drag.id) {
+      if (drag.ignore) return;
       if (!drag.moved) {
-        if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) <= DRAG_PX) return;
+        const mx = e.clientX - drag.x0, my = e.clientY - drag.y0;
+        if (Math.hypot(mx, my) <= DRAG_PX) return;
+        // a mostly vertical touch is the page scrolling, not a rotation
+        if (drag.type === 'touch' && Math.abs(my) > Math.abs(mx)) { drag.ignore = true; suppressClick = true; return; }
         drag.moved = true; suppressClick = true;
         cancelTween(); vel = 0; dragging = true;
         drag.lx = e.clientX; drag.lt = e.timeStamp; drag.vel = 0;
@@ -488,6 +497,9 @@ export function createStageViewer(root, options = {}) {
       clearTimeout(suppressTimer);
       suppressTimer = setTimeout(() => { suppressClick = false; }, 60);
       refreshCursor();
+    } else if (d.ignore) {
+      clearTimeout(suppressTimer);
+      suppressTimer = setTimeout(() => { suppressClick = false; }, 60);
     } else if (!cancelled && e && !d.onHs && e.target === canvas && e.isPrimary) {
       pickAt(e.clientX, e.clientY);
     }
@@ -540,7 +552,7 @@ export function createStageViewer(root, options = {}) {
     return new Promise((res) => { tween = { from: yaw, to, t: 0, dur: Math.max(0.05, dur / 1000), res }; vel = 0; turn = 0; });
   }
   function spinTo(to, dur) {
-    if (reduced || !canRun()) { cancelTween(); yaw = to; resumeAt = now0() + SPIN_HOLD; invalidate(); return Promise.resolve(); }
+    if (reduced || !canRun()) { cancelTween(); yaw = to; resumeAt = now0() + SPIN_HOLD; applyYaw(); return Promise.resolve(); }
     return startTween(to, dur);
   }
   function spinToPart(partId, dur) {
@@ -554,6 +566,10 @@ export function createStageViewer(root, options = {}) {
     return spinTo(target, dur);
   }
 
+  function applyYaw() {
+    for (const r of Object.values(world.robots)) r.group.rotation.y = yaw;
+    appliedYaw = yaw; invalidate();
+  }
   function frame(now, dt) {
     if (offAnim) {
       offAnim.t += dt;
@@ -575,19 +591,15 @@ export function createStageViewer(root, options = {}) {
       if (target === 0 && Math.abs(turn) < 1e-4) turn = 0;
       yaw += turn * dt;
     }
-    if (yaw !== appliedYaw) {
-      for (const r of Object.values(world.robots)) r.group.rotation.y = yaw;
-      appliedYaw = yaw; invalidate();
-      if (ptr.inside) rayDirty = true;
-    }
+    if (yaw !== appliedYaw) { applyYaw(); if (ptr.inside) rayDirty = true; }
     if (rayDirty) { rayDirty = false; doRay(); }
     if (pulse.length && !reduced && !lineupMode()) {
       const k = 0.25 + 0.25 * Math.sin(now / 1000 * 5);
       for (const m of pulse) m.material.emissiveIntensity = k;
       dirty = true;
     }
-    if (dirty) { world.render(); dirty = false; root.dataset.ready = 'true'; }
-    if (layoutDirty) { layoutHotspots(); layoutDirty = false; }
+    if (dirty && !simulating) { world.render(); dirty = false; root.dataset.ready = 'true'; }
+    if (layoutDirty && !simulating) { layoutHotspots(); layoutDirty = false; }
   }
 
   // ---------------------------------------------------------------- loop, visibility, lifecycle
@@ -598,7 +610,7 @@ export function createStageViewer(root, options = {}) {
     rafId = requestAnimationFrame(tick);
     const dt = Math.min(0.1, Math.max(0, (now - lastT) / 1000));
     lastT = now;
-    frame(now, dt);
+    frame(now + simOffset, dt);
   }
   function updateRun() {
     if (destroyed) return;
@@ -760,6 +772,7 @@ export function createStageViewer(root, options = {}) {
       get renderer() { return world && world.renderer; }, get scene() { return world && world.scene; }, get camera() { return world && world.camera; },
       get robots() { return world && world.robots; }, state: S, model,
       get yaw() { return yaw; }, get items() { return items; },
+      holds: () => ({ hoverIn, dragging, touching, focusIn, tween: !!tween, vel, turn, wait: resumeAt - performance.now(), reduced }),
       project: proj,
       /** Client-pixel centre of a part's first mesh (for click tests). */
       partPoint(partId, cls = S.active) {
@@ -772,7 +785,7 @@ export function createStageViewer(root, options = {}) {
       },
       renderNow() { dirty = true; layoutDirty = true; frame(performance.now(), 0); world.render(); },
       /** Run `sec` seconds of the loop at 60 fps without waiting for animation frames (the clock starts now). */
-      advance(sec) { let t = performance.now(); for (let i = 0, n = Math.round(sec * 60); i < n; i++) { t += 1000 / 60; frame(t, 1 / 60); } },
+      advance(sec) { simulating = true; for (let i = 0, n = Math.round(sec * 60); i < n; i++) { simOffset += 1000 / 60; frame(performance.now() + simOffset, 1 / 60); } simulating = false; dirty = layoutDirty = true; },
     };
   }
   return viewer;
