@@ -87,6 +87,11 @@ rvictl -x <UDID-of-the-iPad>
 - Check AgiBot's terms and the warranty before any step that goes beyond listening.
 - Keep a hardware e-stop within reach for any test that moves the robot. The robot goes on a stand for anything that sends it a command.
 
+## More notes
+
+- `ethernet-and-scan.md`: the A2's Ethernet port, wired capture, and recording the depth camera. Planning notes, not run yet.
+- `status-link.md`: T-Deck and LilyGO T3 as a LoRa status link. Planning notes, not run yet.
+
 ## Scripts
 
 - `capture.sh <run>`: passive capture, rotating files, notes start and stop.

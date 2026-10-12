@@ -76,3 +76,34 @@ Make the robot the first and main page, have the pages spin around on a turntabl
 - Not fixed: hotspots do not test occlusion; the Planner still looks denser than the other stations; fonts are not self-hosted; assets are not fingerprinted for long caching; two WebGL driver warnings per load come from the software renderer.
 - Is the muted tint on origin and status (US, China, third country; confirmed, in progress, open) acceptable, or should the site go purely monochrome?
 - Should `dev/`, `docs/`, `tests/` and `agent/` be hidden from the public deploy?
+
+## 2026-10-12 — A2 Ethernet, depth-camera recording, LilyGO pairing
+
+- Start: 2026-10-12 07:40 UTC (approx.)
+- End: 2026-10-12 08:30 UTC (approx.)
+- Duration: about 50 minutes, mostly searches and two page fetches.
+
+### Question
+The A2 has an Ethernet port: how do we listen on it? How do we scan and record objects with the A2's RGB-D camera, and what is the Pi 5's role? How do a T-Deck and a LilyGO LoRa32 T3 V1.6.1 (marked 868/915) work together?
+
+### Sources
+- AgiBot A2 Ultra product page https://www.agibot.com/products/A2_Ultra (RGB-D head camera listed; no Ethernet port listed).
+- AgiBot AimDK A2 sensor-data guide https://open.agibot.com/docs/en/aimdk/a2/v2_0/dev_guide/07-04-sensor_data (sensors as ROS 2 topics; only the listing was read).
+- AgiBot X2 SDK notes (ROS 2 Humble, wired addresses 10.0.1.2 and 10.0.1.41; developer mode disables native motion control). X2, not A2.
+- Meshtastic hardware page for the TTGO LoRa32 https://meshtastic.org/docs/hardware/devices/community-supported/lilygo/lora/ (firmware support phased out; recommends T3S3; battery note).
+- Meshtastic Python CLI page https://meshtastic.org/docs/software/python/cli/ (install, `--set`, `--sendtext`, `--nodes`).
+- LilyGO wiki and ESPHome device page for the T3 V1.6.1 (specs, SX1276/SX1278).
+- Meshtastic community forum posts on message size (about 200 bytes; unofficial).
+
+### Conclusion
+- The A2's Ethernet addressing and purpose are unverified. First step is a look-only capture. For passive capture prefer a managed switch with a mirror port; a Pi 5 inline bridge works in principle but is untested and puts the Pi in the path.
+- Depth recording is feasible in principle through the documented ROS 2 sensor topics and rosbag2, with offline reconstruction on the Mac mini. Subscribing is not purely passive. No topic names, access method or reconstruction results were verified.
+- The T3 V1.6.1 is a fixed-node board; the T-Deck is the handheld. Meshtastic marks the T3 as phased out, so this link may not survive firmware updates. The 868/915 marking means the SX1276 version, region US for Florida.
+- Written up in `lab/ethernet-and-scan.md` and `lab/status-link.md`.
+
+### Open questions
+- How is the A2's Ethernet port addressed, and is it a developer port?
+- Can the A2's sensor topics be read from an external machine, and does that need developer mode or affect the warranty?
+- Does the current Meshtastic firmware still run on the T3 V1.6.1 (silkscreen 20210134)?
+- Is the default Meshtastic channel key public (believed yes, unverified)?
+- Does a Pi 5 keep up with recording RGB-D at full rate?
