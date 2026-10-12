@@ -7,7 +7,7 @@ export function createTimelineView(el) {
   <div class="page">
     <header class="page-head">
       <p class="eyebrow">Timeline</p>
-      <h2 class="h1" data-role="title" tabindex="-1">Timeline to the Conditional Approval deadline</h2>
+      <h1 class="h1" data-role="title" tabindex="-1">Timeline to the Conditional Approval deadline</h1>
       <p class="lede"><span class="tag fixed">Fixed</span> dates come from the rule text or published guidance. <span class="tag proposed">Proposed</span> milestones are this plan’s sequencing, back-planned from January 1, 2028, and can move. Each milestone links to the checklist items and supplier pins it depends on.</p>
     </header>
     <dl class="readouts big">
@@ -41,7 +41,7 @@ export function createTimelineView(el) {
     enter(params) {
       const t = $('[data-role=title]', el);
       if (params && params.m) flash($('#tl-' + params.m, el));
-      else { if (t) t.focus({ preventScroll: true }); el.scrollTop = 0; }
+      else el.scrollTop = 0;
     },
     leave() {},
     refresh: paint,

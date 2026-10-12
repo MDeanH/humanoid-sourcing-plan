@@ -11,7 +11,7 @@ export function createChecklistView(el, ctx) {
     <header class="page-head row-between">
       <div>
         <p class="eyebrow">Checklist</p>
-        <h2 class="h1" data-role="title" tabindex="-1">US compliance checklist</h2>
+        <h1 class="h1" data-role="title" tabindex="-1">US compliance checklist</h1>
         <p class="lede">What a new robot model needs before it can be marketed or sold in the US. Click a status to cycle it: Confirmed, In progress, Open. Statuses are saved in this browser.</p>
         <dl class="legend">
           <div><dt><span class="tag ok">FCC-confirmed</span></dt><dd>matches the FCC FAQ</dd></div>
@@ -73,7 +73,7 @@ export function createChecklistView(el, ctx) {
     enter(params) {
       const t = $('[data-role=title]', el);
       if (params && params.item) flash($('#ck-' + params.item, el));
-      else { if (t) t.focus({ preventScroll: true }); el.scrollTop = 0; }
+      else el.scrollTop = 0;
     },
     leave() {},
     refresh() {},

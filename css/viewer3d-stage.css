@@ -57,7 +57,7 @@
 
 .v3d-stage .v3d-hs:hover .v3d-hs-dot,
 .v3d-stage .v3d-hs.is-hot .v3d-hs-dot,
-.v3d-stage .v3d-hs:focus-visible .v3d-hs-dot { transform: scale(1.6); }
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-dot { transform: scale(1.6); box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--text); }
 .v3d-stage .v3d-hs:focus-visible .v3d-hs-dot,
 .v3d-stage .v3d-hs.is-hot .v3d-hs-dot { box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--text); }
 .v3d-stage .v3d-hs:hover .v3d-hs-ring,

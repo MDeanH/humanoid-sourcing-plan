@@ -59,7 +59,9 @@ export function parseHash(order) {
   const raw = location.hash.replace(/^#/, '');
   const [name, q] = raw.split('?');
   const alias = { overview: 'plan' };
-  const station = order.includes(alias[name] || name) ? (alias[name] || name) : 'robot';
+  // an empty hash is the robot; any other name that is not a station (the skip link's #scene, a typo) is ignored by the router
+  const known = order.includes(alias[name] || name);
+  const station = !name ? 'robot' : (known ? (alias[name] || name) : null);
   const params = {};
   if (q) for (const kv of q.split('&')) { const [k, v] = kv.split('='); if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || ''); }
   return { station, params };

@@ -6,6 +6,8 @@ const SIZE = 600, RADIUS = 268, C = SIZE / 2;
 const WHEN = { us: 'now', foreign: 'later', minor: 'later' };
 const FILTER_KEYS = ['origin', 'part', 'cls', 'group', 'status'];
 
+const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
@@ -33,7 +35,7 @@ export function createGlobeView(el, ctx) {
     <aside class="globe-side" data-role="side">
       <button class="btn ghost sm" type="button" data-go="robot">‹ Back to the robot</button>
       <p class="eyebrow">Supplier map</p>
-      <h2 class="h2" data-role="title" tabindex="-1">All supplier pins</h2>
+      <h1 class="h2" data-role="title" tabindex="-1">All supplier pins</h1>
       <p class="readout mono" data-role="count"></p>
       <div data-role="context"></div>
       <div class="chips" data-role="groups" aria-label="Filter by part group"></div>
@@ -44,7 +46,7 @@ export function createGlobeView(el, ctx) {
 
   const svg = $('[data-role=svg]', el);
   // open facing the Americas, where the first rows of the list (the US options) have their pins
-  const S = { rot: [92, -30], filter: {}, selected: null, spinning: true, active: false, drag: null, land: null, proj: null, path: null, tween: null, raf: 0, last: 0, ready: false, fallbackGroup: null };
+  const S = { rot: [92, -30], filter: {}, selected: null, spinning: !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), active: false, drag: null, land: null, proj: null, path: null, tween: null, raf: 0, last: 0, ready: false, fallbackGroup: null };
 
   /* ---------------------------------------------------------------- filtering */
   function exactMatches(partId) { const id = canonPart(partId); return SUPPLIERS.filter((s) => s.parts.includes(id)); }
@@ -176,7 +178,11 @@ export function createGlobeView(el, ctx) {
         S.rot = [lerpAngle(S.tween.from[0], S.tween.to[0], e), S.tween.from[1] + (S.tween.to[1] - S.tween.from[1]) * e];
         if (k >= 1) S.tween = null;
         draw();
-      } else if (S.spinning && !S.drag) { S.rot[0] += 5 * dt; draw(); }
+      } else if (S.spinning && !S.drag) {
+        // a slow drift does not need 60 redraws a second: redraw every other frame and carry the time over
+        S.acc = (S.acc || 0) + dt;
+        if (S.acc >= 0.033) { S.rot[0] += 5 * S.acc; S.acc = 0; draw(); }
+      }
     };
     S.last = 0; S.raf = requestAnimationFrame(tick);
   }
@@ -255,19 +261,22 @@ export function createGlobeView(el, ctx) {
     if (e.target.closest('[data-clear]')) { S.filter = {}; S.fallbackGroup = null; S.selected = null; renderSide(); draw(); syncHash(); }
   });
 
-  boot();
+  // the map libraries (about 60 KB) and the land outlines load when the globe is first shown, not on every cold load
+  let bootStarted = false;
+  const ensureBoot = () => { if (!bootStarted) { bootStarted = true; boot(); } };
 
   return {
     prepare(params) {
+      ensureBoot();
       applyParams(params);
-      S.spinning = !(S.filter.part || S.selected || S.filter.group || S.filter.status);
+      S.spinning = !reducedMotion() && !(S.filter.part || S.selected || S.filter.group || S.filter.status);
       setSpinBtn();
       renderSide();
       if (S.selected) { const s = SUP[S.selected]; if (S.ready) rotateTo(s.lon, s.lat, 1200); else S.pendingFocus = true; }
       else if (S.filter.part || S.filter.group || S.filter.origin || S.filter.status) { if (S.ready) focusOnVisible(); else S.pendingFocus = true; }
       draw();
     },
-    enter() { S.active = true; loop(); const t = $('[data-role=title]', el); if (t) t.focus({ preventScroll: true }); el.scrollTop = 0; },
+    enter() { S.active = true; loop(); el.scrollTop = 0; },
     leave() { S.active = false; cancelAnimationFrame(S.raf); },
     refresh() {},
     destroy() { cancelAnimationFrame(S.raf); if (S.cleanup) S.cleanup(); },

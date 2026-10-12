@@ -46,13 +46,22 @@ b { font-weight: 600; }
 .dock-arrow { width: 36px; height: 36px; background: none; border: 1px solid var(--line); border-radius: var(--radius-m); cursor: pointer; font-size: 20px; line-height: 1; color: var(--text-dim); transition: background 0.4s var(--ease), color 0.4s var(--ease); }
 .dock-arrow:hover { background: var(--text); color: #000; }
 .dock-ticks { display: flex; gap: 6px; align-items: center; }
-.dock-tick { width: 22px; height: 18px; background: none; border: 0; padding: 0; cursor: pointer; position: relative; }
-.dock-tick::after { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--line-strong); transition: background 0.4s var(--ease), height 0.4s var(--ease), top 0.4s var(--ease); }
+.dock-tick { width: 24px; height: 24px; background: none; border: 0; padding: 0; cursor: pointer; position: relative; }
+.dock-tick::after { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 2px; background: var(--line-strong); transition: background 0.4s var(--ease), height 0.4s var(--ease), top 0.4s var(--ease); }
 .dock-tick:hover::after { background: var(--text-dim); }
-.dock-tick.on::after { background: var(--text); top: 7px; height: 4px; }
+.dock-tick.on::after { background: var(--text); top: 10px; height: 4px; }
 .dock-label { font: 400 11px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; min-width: 150px; color: var(--text-dim); }
 .dock-num { color: var(--text-faint); }
-@media (max-width: 700px) { .dock { gap: 10px; } .dock-label { min-width: 0; } .dock-tick { width: 16px; } }
+@media (max-width: 700px) { .dock { gap: 8px; } .dock-label { min-width: 0; } .dock-tick { width: 24px; } .dock-ticks { gap: 0; } }
+/* tiny phones: keep the menu button on screen */
+@media (max-width: 380px) { .wordmark { letter-spacing: 0.16em; font-size: 12px; } .nav { gap: 12px; } }
+/* touch: every control gets a finger-sized target */
+@media (pointer: coarse) {
+  .btn.sm, .status, .seg-btn, .chip, .nav-toggle { min-height: 44px; }
+  .dock-arrow { width: 44px; height: 44px; }
+  .link.plain, .suplist button { min-height: 44px; }
+  .link.plain { padding: 10px 0; }
+}
 
 /* ------------------------------------------------------------ type, buttons, tags */
 .eyebrow { font: 400 12px/1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-dim); margin: 0 0 18px; }

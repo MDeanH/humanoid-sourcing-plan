@@ -20,7 +20,7 @@ export function createPlanView(el) {
   <div class="page">
     <header class="page-head">
       <p class="eyebrow">Plan</p>
-      <h2 class="h1" data-role="title" tabindex="-1">Build plan, in order of impact</h2>
+      <h1 class="h1" data-role="title" tabindex="-1">Build plan, in order of impact</h1>
       <p class="lede">The FCC test counts component cost, not part count. Spend domestic-sourcing effort where the cost is. Each step links to the parts, suppliers, and checklist items it depends on.</p>
     </header>
     <dl class="readouts big">
@@ -73,7 +73,7 @@ export function createPlanView(el) {
   paint();
   return {
     prepare() {},
-    enter() { const t = el.querySelector('[data-role=title]'); if (t) t.focus({ preventScroll: true }); el.scrollTop = 0; },
+    enter() { el.scrollTop = 0; },
     leave() {},
     refresh() { el.querySelector('[data-role=days]').textContent = daysUntil('2028-01-01'); },
     destroy() { unsub(); },

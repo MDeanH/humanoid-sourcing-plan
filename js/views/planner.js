@@ -7,7 +7,7 @@ export function createPlannerView(el) {
   <div class="page wide">
     <header class="page-head">
       <p class="eyebrow">Planner</p>
-      <h2 class="h1" data-role="title" tabindex="-1">Full platform planner</h2>
+      <h1 class="h1" data-role="title" tabindex="-1">Full platform planner</h1>
       <p class="lede">All four platforms with their published specs, and a live parts planner: mark each line US-made, foreign or unknown and watch the score against the 65% and 75% tests. Costs are relative placeholders, not quotes.</p>
     </header>
     <div class="planner-root" data-role="root"><p class="mono planner-load">Loading 3D planner</p></div>
@@ -50,7 +50,6 @@ export function createPlannerView(el) {
       S.active = true;
       apply(params || {});
       mount().then(() => { if (S.viewer) S.viewer.resume(); });
-      const t = $('[data-role=title]', el); if (t) t.focus({ preventScroll: true });
       el.scrollTop = 0;
     },
     leave() { S.active = false; if (S.viewer) S.viewer.pause(); },

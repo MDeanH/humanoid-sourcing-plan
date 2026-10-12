@@ -40,16 +40,27 @@ const ring = createRing({
     if (leaving !== arriving) views[leaving].leave();
     views[arriving].enter(pending[arriving] || {});
     paintDock();
+    focusStation(arriving);
   },
 });
+
+/** After a spin, keyboard and screen-reader focus follows the ring: the new station's heading takes it. */
+function focusStation(id) {
+  const el = els[id], a = document.activeElement;
+  if (a && a !== document.body && (el.contains(a) || (a.closest && a.closest('#dock, #nav')))) return;   // keep focus where the user is navigating from
+  const h = el.querySelector('h1');
+  if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+}
 
 /* ---------------------------------------------------------------- routing */
 function route() {
   const { station, params } = parseHash(ORDER);
+  if (!station) return;                       // not one of ours (the skip link's #scene, a typo): leave the ring where it is
   const idx = ORDER.indexOf(station);
   pending[station] = params;
   views[station].prepare(params);
   paintNav(station);
+  document.title = station === 'robot' ? 'Humanoid Sourcing Plan · US-compliant humanoid build' : `${NAMES[station]} · Humanoid Sourcing Plan`;
   if (idx === ring.active && !ring.spinning) views[station].enter(params);
   else ring.spinTo(idx, { instant: !booted });
   paintDock(idx);
@@ -66,10 +77,13 @@ function paintNav(station) {
   });
 }
 const ticks = $('#dockTicks');
-ticks.innerHTML = ORDER.map((id, i) => `<button type="button" class="dock-tick" role="tab" data-tick="${i}" aria-label="${NAMES[id]}"></button>`).join('');
+ticks.innerHTML = ORDER.map((id, i) => `<button type="button" class="dock-tick" data-tick="${i}" aria-label="Go to ${NAMES[id]}"></button>`).join('');
+let dockShown = -1;
 function paintDock(idx) {
   const i = typeof idx === 'number' ? idx : ring.active;
-  $$('.dock-tick').forEach((t, k) => { t.classList.toggle('on', k === i); t.setAttribute('aria-selected', String(k === i)); });
+  if (i === dockShown) return;                // the label is a live region: write it once per station, not twice
+  dockShown = i;
+  $$('.dock-tick').forEach((t, k) => { t.classList.toggle('on', k === i); if (k === i) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
   $('#dockLabel').innerHTML = `<span class="dock-num">${String(i + 1).padStart(2, '0')} / ${String(ORDER.length).padStart(2, '0')}</span> <span class="dock-name">${NAMES[ORDER[i]]}</span>`;
 }
 const step = (d) => { const base = ring.spinning ? ORDER.indexOf(parseHash(ORDER).station) : ring.active; go(ORDER[(base + d + ORDER.length) % ORDER.length]); };
@@ -78,20 +92,35 @@ $('#dockNext').addEventListener('click', () => step(1));
 ticks.addEventListener('click', (e) => { const t = e.target.closest('[data-tick]'); if (t) go(ORDER[+t.dataset.tick]); });
 
 const menu = $('#menu'), toggle = $('#navToggle');
+menu.setAttribute('role', 'dialog');
+menu.setAttribute('aria-modal', 'true');
+menu.setAttribute('aria-label', 'Stations');
 function setMenu(open) {
   menu.hidden = !open;
   toggle.setAttribute('aria-expanded', String(open));
   document.body.classList.toggle('menu-open', open);
   $('.nav-toggle-label', toggle).textContent = open ? 'Close' : 'Menu';
+  // while the menu is open the page behind it is out of reach for keyboard and screen readers
+  scene.inert = open; $('#dock').inert = open;
+  if (open) { const first = menu.querySelector('a'); if (first) first.focus(); }
 }
 toggle.addEventListener('click', () => setMenu(menu.hidden));
 menu.addEventListener('click', () => setMenu(false));
+$('.skip').addEventListener('click', (e) => {
+  e.preventDefault();
+  const el = els[ORDER[ring.active]], h = el.querySelector('h1') || el;
+  h.setAttribute('tabindex', '-1'); h.focus();
+});
+// Arrow keys turn the ring, but only from the page chrome: never from a widget that uses the arrows itself
+// (the 3D planner's controls, the globe, tabs, radios, sliders, fields).
+const OWN_ARROWS = 'input, select, textarea, canvas, svg, [role=radio], [role=tab], [role=slider], [role=listbox], [contenteditable], .v3d, .globe-svg';
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !menu.hidden) { setMenu(false); toggle.focus(); return; }
-  // arrow keys turn the ring when no field has focus
+  if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || !menu.hidden) return;
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
   const t = e.target;
-  if (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable || e.altKey || e.ctrlKey || e.metaKey) return;
-  if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1);
+  if (t && t.closest && t.closest(OWN_ARROWS)) return;
+  step(e.key === 'ArrowRight' ? 1 : -1);
 });
 
 /* One delegated handler for every "go" button and station link on the page. */
@@ -107,6 +136,13 @@ document.addEventListener('click', (e) => {
 route();
 booted = true;
 paintDock();
+/* The 3D engine is about 2 MB of script. A cold load of any station other than the robot or the planner does not need it, so
+   it is fetched (not started) a few seconds after load, once the page is idle, and kept in the module cache for later. */
+{
+  const warm = () => import('./viewer3d/viewer.js').catch(() => {});
+  const entry = parseHash(ORDER).station;
+  if (entry !== 'robot' && entry !== 'planner') setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(warm, { timeout: 3000 }) : warm()), 4000);
+}
 // keep the countdowns honest if the page stays open past midnight
 setInterval(() => Object.values(views).forEach((v) => v.refresh && v.refresh()), 3600 * 1000);
 window.__hsp = { ring, views, go, ORDER };

@@ -12,8 +12,6 @@ const wide = () => window.matchMedia('(min-width: 1000px)').matches;
 export function createRobotView(el, ctx) {
   el.innerHTML = `
   <div class="hero">
-    <div class="hero-stage" data-role="stage" role="group" aria-label="Interactive 3D model of the reference humanoid. Every part is a button that traces its suppliers."></div>
-    <p class="hero-load mono" data-role="load">Loading 3D model</p>
     <div class="hero-copy">
       <p class="eyebrow"><span data-role="classname">A2 Ultra-class</span> reference · US-compliance hardware map</p>
       <h1 class="display">Humanoid,<br>over 65%<br>US-made</h1>
@@ -39,6 +37,9 @@ export function createRobotView(el, ctx) {
       <button type="button" class="seg-btn" data-role="xray" aria-pressed="false">X-ray</button>
     </div>
     <p class="hero-hint mono" data-role="hint">${HINT}</p>
+    <p class="hero-load mono" data-role="load">Loading 3D model</p>
+    <!-- last in the DOM on purpose: the 26 part hotspots come after the buttons and platform tabs in the tab order -->
+    <div class="hero-stage" data-role="stage" role="group" aria-label="Interactive 3D model of the reference humanoid. Every part is a button that traces its suppliers."></div>
   </div>`;
 
   const root = $('[data-role=stage]', el);
@@ -121,12 +122,19 @@ export function createRobotView(el, ctx) {
   const onWide = () => { if (S.viewer) S.viewer.setOffsetX(mqWide.matches ? 0.2 : 0); };
   if (mqWide.addEventListener) mqWide.addEventListener('change', onWide);
 
-  // let the page paint its headline first, then pull in three.js
-  (window.requestIdleCallback || ((f) => setTimeout(f, 60)))(load, { timeout: 800 });
+  // three.js is only fetched when this station is shown (first load on the robot, or the first visit to it): the page
+  // paints its headline first, then pulls the 3D engine in
+  let loadStarted = false;
+  const ensureLoaded = () => {
+    if (loadStarted) return;
+    loadStarted = true;
+    (window.requestIdleCallback || ((f) => setTimeout(f, 60)))(load, { timeout: 800 });
+  };
 
   return {
     /** Called before the ring spins here (and on first load). */
     prepare(params) {
+      ensureLoaded();
       if (params.cls && CLASSES[params.cls] && params.cls !== S.classId && S.size !== params.cls) setSize(params.cls);
       showFocus(params.part, S.classId);
     },
