@@ -1,0 +1,66 @@
+// Small shared helpers for the stations.
+import { PARTS, OVERRIDES, KEYSPEC, SUBSYSTEMS, ORIGIN_REC } from './data/planner-parts.js';
+import { CLASSES } from './data/classes.js';
+import { PART_ALIAS } from './data/site-data.js';
+
+export const $ = (s, root = document) => root.querySelector(s);
+export const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
+export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const PART_BY_ID = Object.fromEntries(PARTS.map((p) => [p.id, p]));
+export const canonPart = (id) => PART_ALIAS[id] || id;
+
+/** A part with the per-class overrides applied (labels, specs and origin notes differ per platform). */
+export function partFor(id, classId = 'full') {
+  const base = PART_BY_ID[canonPart(id)];
+  if (!base) return null;
+  return Object.assign({}, base, (OVERRIDES[classId] || {})[base.id] || {});
+}
+export const shortName = (p) => String(p.label).split(' · ')[0];
+export function keySpec(p, classId) {
+  const ks = (KEYSPEC[classId] || {})[p.id];
+  if (p.dof) return ks ? `${p.dof} DOF · ${ks}` : `${p.dof} DOF`;
+  return ks || '';
+}
+export const className = (classId) => (CLASSES[classId] ? CLASSES[classId].short : '');
+export { SUBSYSTEMS, ORIGIN_REC, CLASSES };
+
+export function daysUntil(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return Math.max(0, Math.ceil((d - new Date()) / 86400000));
+}
+
+/** Row of "go" buttons. Links are plain hash targets handled by the app router. */
+export function xlinks(links) {
+  if (!links || !links.length) return '';
+  return '<div class="xlinks">' + links.map(([h, t]) => `<button class="btn sm" type="button" data-go="${esc(h)}">${esc(t)}</button>`).join('') + '</div>';
+}
+
+let toastTimer = 0;
+export function toast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2000);
+}
+
+/** Scroll an element into the middle of its station and flash it. */
+export function flash(el) {
+  if (!el) return;
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1800);
+}
+
+/** Hash helpers. Form: #station or #station?key=value&key=value */
+export function parseHash(order) {
+  const raw = location.hash.replace(/^#/, '');
+  const [name, q] = raw.split('?');
+  const alias = { overview: 'plan' };
+  const station = order.includes(alias[name] || name) ? (alias[name] || name) : 'robot';
+  const params = {};
+  if (q) for (const kv of q.split('&')) { const [k, v] = kv.split('='); if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || ''); }
+  return { station, params };
+}

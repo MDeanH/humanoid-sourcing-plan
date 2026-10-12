@@ -1,0 +1,130 @@
+/* 3D viewer, stage variant: the interactive landing-page robot (js/viewer3d/stage.js).
+   Every selector is scoped under .v3d-stage. Colors, fonts and easing come only from the design tokens; the one data color
+   (the subsystem color of a hotspot) is set from JS as --hs. Load after css/viewer3d.css.
+   Host-tunable variables: none needed; size the root element and the canvas fills it. */
+
+:where(.v3d.v3d-stage) { position: relative; }
+.v3d-stage {
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;                       /* the page still scrolls vertically; horizontal drags rotate the robot */
+}
+.v3d-stage .v3d-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none;
+  touch-action: pan-y; cursor: grab;
+}
+.v3d-stage.is-dragging, .v3d-stage.is-dragging * { cursor: grabbing !important; }
+
+/* ---------------------------------------------------------------- overlay layer */
+.v3d-stage .v3d-hs-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.v3d-stage .v3d-hs-probe {
+  position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; white-space: nowrap;
+  font: 500 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.v3d-stage.is-static .v3d-hs-layer { pointer-events: none; }
+.v3d-stage.is-static .v3d-hs, .v3d-stage.is-static .v3d-cp { pointer-events: none; cursor: default; }
+
+/* ---------------------------------------------------------------- hotspot */
+.v3d-stage .v3d-hs {
+  position: absolute; left: 0; top: 0; width: 24px; height: 24px; margin: -12px 0 0 -12px; padding: 0;
+  display: block; border: 0; border-radius: 0; background: none; color: var(--text);
+  font: inherit; text-align: left; cursor: pointer; pointer-events: auto; touch-action: pan-y;
+  transform: translate3d(-100px, -100px, 0);
+  -webkit-appearance: none; appearance: none;
+}
+.v3d-stage .v3d-hs[hidden] { display: none !important; }
+.v3d-stage .v3d-hs.is-back { pointer-events: none; }
+.v3d-stage .v3d-hs:focus { outline: none; }
+.v3d-stage .v3d-hs:focus-visible { outline: none; }
+
+.v3d-stage .v3d-hs-dot {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+  background: var(--hs, var(--text));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 70%, transparent);
+  transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+.v3d-stage .v3d-hs-ring {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+  border: 1px solid var(--hs, var(--text)); opacity: 0; pointer-events: none;
+  animation: v3d-hs-pulse 2.6s var(--ease) infinite; animation-delay: var(--d, 0s);
+}
+@keyframes v3d-hs-pulse {
+  0%   { transform: scale(1);   opacity: 0.75; }
+  70%  { transform: scale(3);   opacity: 0; }
+  100% { transform: scale(3);   opacity: 0; }
+}
+.v3d-stage.is-paused .v3d-hs-ring { animation-play-state: paused; }
+
+.v3d-stage .v3d-hs:hover .v3d-hs-dot,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-dot,
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-dot { transform: scale(1.6); }
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-dot,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-dot { box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--text); }
+.v3d-stage .v3d-hs:hover .v3d-hs-ring,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-ring,
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-ring { animation: none; opacity: 0; }
+
+/* ---------------------------------------------------------------- label: text only, no box */
+.v3d-stage .v3d-hs-lbl {
+  position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap; pointer-events: none;
+  font: 500 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text);
+  opacity: 0; transition: opacity 0.2s var(--ease);
+  text-shadow: 0 0 2px var(--bg), 0 0 5px var(--bg), 0 0 12px color-mix(in srgb, var(--bg) 85%, transparent);
+}
+.v3d-stage .v3d-hs.is-r .v3d-hs-lbl, .v3d-stage .v3d-hs:not(.is-l) .v3d-hs-lbl { left: calc(50% + 12px); }
+.v3d-stage .v3d-hs.is-l .v3d-hs-lbl { right: calc(50% + 12px); text-align: right; }
+/* hairline from the dot to the text */
+.v3d-stage .v3d-hs-lbl::before {
+  content: ""; position: absolute; top: 50%; width: 6px; height: 1px; background: var(--text); opacity: 0.35;
+}
+.v3d-stage .v3d-hs.is-r .v3d-hs-lbl::before, .v3d-stage .v3d-hs:not(.is-l) .v3d-hs-lbl::before { left: -9px; }
+.v3d-stage .v3d-hs.is-l .v3d-hs-lbl::before { right: -9px; }
+
+.v3d-stage .v3d-hs-nm { opacity: 0.72; transition: opacity 0.2s var(--ease); }
+.v3d-stage .v3d-hs-ks { margin-left: 12px; color: var(--text-dim); opacity: 0.8; }
+.v3d-stage .v3d-hs.is-l .v3d-hs-ks { margin-left: 12px; }
+.v3d-stage .v3d-hs.is-show .v3d-hs-lbl { opacity: 1; }
+
+.v3d-stage .v3d-hs:hover .v3d-hs-lbl,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-lbl,
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-lbl { opacity: 1; z-index: 2; }
+.v3d-stage .v3d-hs:hover .v3d-hs-nm,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-nm,
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-nm { opacity: 1; }
+.v3d-stage .v3d-hs:hover .v3d-hs-lbl::before,
+.v3d-stage .v3d-hs.is-hot .v3d-hs-lbl::before,
+.v3d-stage .v3d-hs:focus-visible .v3d-hs-lbl::before { opacity: 0.8; }
+
+/* narrow stages: the key spec shows only for the part that is hot */
+.v3d-stage[data-compact="true"] .v3d-hs .v3d-hs-ks { display: none; }
+.v3d-stage[data-compact="true"] .v3d-hs.is-hot .v3d-hs-ks,
+.v3d-stage[data-compact="true"] .v3d-hs:focus-visible .v3d-hs-ks { display: inline; }
+
+/* ---------------------------------------------------------------- lineup captions */
+.v3d-stage .v3d-cp {
+  position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 64px; padding: 6px 8px; margin: 0; border: 0; border-radius: 0; background: none; color: var(--text);
+  font: inherit; text-align: center; cursor: pointer; pointer-events: auto; touch-action: pan-y;
+  transform: translate(-100px, -100px);
+  -webkit-appearance: none; appearance: none;
+}
+.v3d-stage .v3d-cp:focus, .v3d-stage .v3d-cp:focus-visible { outline: none; }
+.v3d-stage .v3d-cp-nm, .v3d-stage .v3d-cp-ks {
+  font: 500 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  text-shadow: 0 0 2px var(--bg), 0 0 5px var(--bg), 0 0 12px color-mix(in srgb, var(--bg) 85%, transparent);
+}
+.v3d-stage .v3d-cp-nm { opacity: 0.8; transition: opacity 0.2s var(--ease); }
+.v3d-stage .v3d-cp-ks { color: var(--text-dim); opacity: 0.7; transition: opacity 0.2s var(--ease); }
+.v3d-stage[data-compact="true"] .v3d-cp-ks { display: none; }
+.v3d-stage .v3d-cp::after {
+  content: ""; width: 24px; height: 1px; background: var(--text); opacity: 0.35; transition: opacity 0.2s var(--ease), width 0.2s var(--ease);
+}
+.v3d-stage .v3d-cp:hover .v3d-cp-nm, .v3d-stage .v3d-cp.is-hot .v3d-cp-nm, .v3d-stage .v3d-cp:focus-visible .v3d-cp-nm,
+.v3d-stage .v3d-cp:hover .v3d-cp-ks, .v3d-stage .v3d-cp.is-hot .v3d-cp-ks, .v3d-stage .v3d-cp:focus-visible .v3d-cp-ks { opacity: 1; }
+.v3d-stage .v3d-cp:hover::after, .v3d-stage .v3d-cp.is-hot::after, .v3d-stage .v3d-cp:focus-visible::after { opacity: 0.9; width: 40px; }
+
+/* ---------------------------------------------------------------- motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .v3d-stage .v3d-hs-ring { animation: none !important; opacity: 0.45; transform: scale(1.8); }
+  .v3d-stage .v3d-hs-dot, .v3d-stage .v3d-hs-lbl, .v3d-stage .v3d-hs-nm, .v3d-stage .v3d-cp-nm, .v3d-stage .v3d-cp-ks, .v3d-stage .v3d-cp::after { transition: none !important; }
+}
