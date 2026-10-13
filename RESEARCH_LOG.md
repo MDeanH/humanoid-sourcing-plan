@@ -135,3 +135,27 @@ How can one analysis with the Flipper Zero and the LilyGO boards help prevent in
 - Which convention center and show, and what does its exhibitor wireless policy say?
 - What band is the A2's e-stop remote on? Does the A2 support 5 GHz Wi-Fi?
 - Does the Flipper own a Wi-Fi devboard? It would add a 2.4 GHz view but not 5 GHz.
+
+## 2026-10-13 — Mac mini for the venue Wi-Fi survey
+
+- Start: 2026-10-13 17:10 UTC
+- End: 2026-10-13 17:16 UTC (approx.)
+- Duration: about 6 minutes.
+
+### Question
+Can the Mac mini do the venue survey's Wi-Fi part instead of the Pi 5?
+
+### Sources
+- Intuitibits on the `airport` deprecation and `wdutil` https://www.intuitibits.com/fp8g ; Apple developer forums https://developer.apple.com/forums/thread/749274 and https://developer.apple.com/forums/thread/802997 (redacted network names on Tahoe).
+- Jamf community on `wdutil info` redaction from 14.5 https://tucwu38334.lithium.com/t5/jamf-pro/collecting-active-ssid-with-macos-sonoma-14-4-and-later/m-p/311680 .
+- iMore and How-To Geek guides to Wireless Diagnostics Scan https://www.imore.com/how-use-macos-wireless-diagnostics-get-best-possible-wifi-settings-your-area , https://www.howtogeek.com/211034/troubleshoot-and-analyze-your-mac%E2%80%99s-wi-fi-with-the-wireless-diagnostics-tool .
+- Retailer listings for the M5 Pro Mac mini with Wi-Fi 7 (Apple N1), e.g. https://www.scan.co.uk/products/mac-mini-apple-m5-pro-chip-with-15core-cpu-and-16core-gpu-24gb-512gb-ssd . Not checked against Apple's spec page.
+
+### Conclusion
+- Yes for Wi-Fi, through the Wireless Diagnostics Scan window, captured as screenshots. A scripted log is unreliable on current macOS because of the `airport` removal and name redaction.
+- Its advantage over the Pi 5 is 6 GHz, if the model has Wi-Fi 6E or 7. Its drawback is portability, so it covers the booth and the Pi covers the walk.
+- Added to `lab/venue-survey.md`.
+
+### Open questions
+- Which Mac mini model and macOS version does Michael have?
+- Does the Scan window still exist and still show nearby networks unredacted on the current macOS?
