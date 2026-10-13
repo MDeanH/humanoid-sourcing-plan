@@ -4,4 +4,4 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="${TMPDIR:-/tmp}/wifi-analyzer-common-test"
 c++ -std=c++17 -Wall -Wextra -Werror -o "$OUT" "$HERE/test_common.cpp"
-"$OUT" "$HERE/../../testdata/channel-cases.tsv"
+"$OUT" "$HERE/../../testdata/channel-cases.tsv" "$HERE/../../testdata/group-frame.tsv"

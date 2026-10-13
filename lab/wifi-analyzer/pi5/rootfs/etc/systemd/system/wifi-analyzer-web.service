@@ -1,0 +1,21 @@
+[Unit]
+Description=Wi-Fi analyzer: dashboard for the iPhone on port 8765
+After=wifi-analyzer-scan.service network.target
+Requires=wifi-analyzer-scan.service
+
+[Service]
+Type=simple
+# wait for this boot's run name, written by wifi-analyzer-scan.service
+ExecStartPre=/bin/sh -c 'for i in $(seq 60); do [ -s /run/wifi-analyzer/current-run ] && exit 0; sleep 1; done; exit 1'
+ExecStart=/bin/sh -c 'exec /usr/bin/python3 /opt/wifi-analyzer/web/server.py "$(cat /run/wifi-analyzer/current-run)" --capture-dir /var/lib/wifi-analyzer/captures --port 8765'
+Restart=on-failure
+RestartSec=5
+ProtectSystem=strict
+ReadWritePaths=/var/lib/wifi-analyzer
+ReadOnlyPaths=/run/wifi-analyzer
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

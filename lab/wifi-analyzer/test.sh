@@ -48,8 +48,7 @@ grep -Eq "^6g37 +1 +0 +-80" "$TMP/mac.out" || fail "6 GHz channel row"
 grep -Eq "^5g100 +1 +0 +-77 +- +- +DFS" "$TMP/mac.out" || fail "DFS flag"
 grep -Eq "^2g11 +2 +2 +-54" "$TMP/tdeck.out" || fail "T-Deck uptime-stamped lines"
 grep -q "Channels (.*), 2 scans" "$TMP/tdeck.out" || fail "T-Deck scan count"
-if [ -f "$TMP/pi5.out" ]; then
-  grep -q "Channels" "$TMP/pi5.out" || fail "Pi 5 sample"
-fi
-echo "  survey-summary.sh read the Mac, iPhone and T-Deck samples correctly"
+grep -Eq "^5g36 +1 +1 +-71 +25 +-92" "$TMP/pi5.out" || fail "Pi 5 lines with channel-busy share from survey.tsv"
+grep -q "Channels (.*), 2 scans" "$TMP/pi5.out" || fail "Pi 5 scan count"
+echo "  survey-summary.sh read the Mac, iPhone, T-Deck and Pi 5 samples correctly"
 echo "All tests passed."

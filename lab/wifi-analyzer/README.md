@@ -18,9 +18,10 @@ Purpose: find out why the A2 Ultra loses its Wi-Fi link in the convention hall, 
 | LilyGO T-Deck (`tdeck/`) | Handheld scanner: channels, networks, track one network; logs to SD | 2.4 GHz only | `/wifi/scanNNN.tsv` on its SD card, and USB serial | Scans, SD card found, keyboard found, group link both ways: verified. Screen content, trackball and keys: **unverified** (see below) |
 | LilyGO LoRa32 T3 V1.6.1 (`lora32-paxcounter/`) | Paxcounter: counts Wi-Fi devices nearby (crowd size); sends the count to the group | 2.4 GHz only | Paxcounter's own table on SD, if a card is in | Counting and broadcast verified (heard by the T-Deck). OLED and SD: **unverified** |
 | Waveshare ESP32-S3 AMOLED 2.06 watch (`watch/`) | Wrist display of the group, plus its own scan | 2.4 GHz only | none | Runs on its battery; scans and group link verified. Screen content and touch: **unverified** |
+| Raspberry Pi 5 (`pi5/`) | The Mac's job without the Mac: passive scans every 10 s, the iPhone dashboard (by USB tethering or Ethernet), and the group's Bluetooth reports | 2.4, 5 GHz | `airscan.tsv`, `survey.tsv`, `linklog.tsv`, `group.tsv`, `iphone-probe.tsv` | Ready-to-flash image built and its contents checked on the Mac. Not yet run on a Pi: **unverified** |
 | Flipper Zero (`flipper/`, `devboard/`) | Not built. It has no Wi-Fi radio and needs the official Wi-Fi Devboard, which we do not have | | | Skipped |
 
-The ESP32 boards (T-Deck, LoRa32, watch) hear 2.4 GHz only. The robot's link may well be on 5 GHz, so the Mac (or a Pi 5) is the only part of this kit that sees 5 GHz, and only the Mac sees 6 GHz.
+The ESP32 boards (T-Deck, LoRa32, watch) hear 2.4 GHz only. The robot's link may well be on 5 GHz, so only the Mac and the Pi 5 see 5 GHz, and only the Mac sees 6 GHz. Without the Mac or the Pi, the iPhone has nothing to show: iOS cannot scan Wi-Fi and Safari cannot hear the group's Bluetooth adverts. The scans then live on the T-Deck and watch screens and the T-Deck's SD card.
 
 "Verified" here means run on the real device on 2026-10-13, at the Mac's desk, not at the venue and not with the robot.
 
@@ -131,6 +132,10 @@ Not verified: what the glass shows, and whether a finger lands where expected. O
 ## Group link
 
 Each board sends a 27-byte non-connectable Bluetooth LE advert once a second at 0 dBm: manufacturer data under company ID 0xFFFF (reserved for internal use) with magic `RW`, the board kind and ID, a sequence number, flags (scan data, paused, logging, tracking, Paxcounter count, display and input health), networks heard, the Paxcounter count, networks per channel 1-13, the strongest network and the tracked network. The format is in `common/wifilogic/src/groupframe.h`. The T-Deck and the watch listen with passive scans (no scan requests) and pause listening during their own Wi-Fi scans. Nobody can connect to the adverts; nothing joins a network.
+
+## Raspberry Pi 5 (`pi5/`)
+
+A ready-to-flash Raspberry Pi OS Lite image with the analyzer built in (`pi5/make-image.sh`), or `pi5/install.sh` for a Pi already set up. It covers 2.4 and 5 GHz (no 6 GHz), scans passively every 10 s, serves the same dashboard plus a Group tab, and listens to the T-Deck, LoRa32 and watch over Bluetooth. Details, Wi-Fi limits and the first hardware test: `pi5/README.md`.
 
 ## Tests
 

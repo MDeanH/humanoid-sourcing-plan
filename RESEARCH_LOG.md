@@ -229,3 +229,31 @@ Build a listen-only Wi-Fi signal analyzer across the Mac mini, the iPhone, the T
 - Were the watch's three unexplained page changes in 90 s phantom touches? A stricter touch check is built but not yet flashed.
 - Does the LoRa32 have an SD card, and does Paxcounter's table on it work?
 - Raspberry Pi 5 version (asked for at the end of the session): its built-in Wi-Fi covers 2.4 and 5 GHz, not 6 GHz; whether brcmfmac honours `iw scan passive` is unverified.
+
+## 2026-10-13 — Raspberry Pi 5 version of the Mac's job
+
+- Start: 2026-10-13 19:35 UTC
+- End: 2026-10-13 20:10 UTC (approx.)
+- Duration: about 35 minutes, on the Mac; no Pi was reachable.
+
+### Question
+Build a Raspberry Pi 5 OS that does what the Mac does (scan, log, serve the iPhone), for portability, with the Pi's Wi-Fi limits understood.
+
+### Sources
+- raspberrypi/linux rpi-6.12.y, `drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c` (brcmf_escan_prep: with no SSIDs, "Performing passive scan", `BRCMF_SCANTYPE_PASSIVE`).
+- iw `scan.c` (the `passive` argument omits NL80211_ATTR_SCAN_SSIDS).
+- Raspberry Pi OS Lite arm64 2026-10-06 (Trixie) image from downloads.raspberrypi.com, SHA-256 verified; its /var/lib/dpkg/status, apt sources and cloud-init files read with debugfs and mtools.
+- Package indexes: archive.raspberrypi.com/debian trixie main arm64 (Packages.gz; there is no .xz) and deb.debian.org trixie main arm64.
+
+### Conclusion
+- The Pi 5's built-in radio covers 2.4 and 5 GHz, not 6 GHz. Unlike the Mac it can be asked for a passive scan: `iw scan passive` sends no SSID list and brcmfmac then scans passively (from the source; unverified on hardware). It can scan every 10 s and sees network names without a permission prompt.
+- NetworkManager scans actively while it manages an unconnected Wi-Fi device, so the image marks wlan0 unmanaged; `WIFI_CLIENT=yes` reverses that.
+- Built `pi5/make-image.sh` (Raspberry Pi OS Lite plus the analyzer, edited with debugfs and mtools, no mounting) and `pi5/install.sh`. The image passes e2fsck, contains every program the services call, and bundles usbmuxd plus four libraries for iPhone USB tethering. Services: passive scans, a raw-HCI passive Bluetooth listener for the group (`group.tsv`), and the dashboard with a new Group tab.
+- `lab/airscan.sh` (`iw scan` without `passive`) sends probe requests; noted, not changed.
+- Nothing has run on a Pi yet.
+
+### Open questions
+- Does the image boot and do the services start? Is brcmfmac's scan really passive (check with its dynamic debug output)?
+- Does iPhone USB tethering need "Allow Others to Join", and does the phone's hotspot Wi-Fi then transmit?
+- Does the raw HCI listener coexist with bluetoothd on the Pi 5 (legacy versus extended scan commands)?
+- Do the bundled .debs install against the image's newer library versions?

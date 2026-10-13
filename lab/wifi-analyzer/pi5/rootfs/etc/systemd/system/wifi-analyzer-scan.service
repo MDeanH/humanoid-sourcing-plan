@@ -1,0 +1,22 @@
+[Unit]
+Description=Wi-Fi analyzer: passive Wi-Fi scans to /var/lib/wifi-analyzer/captures (lab/wifi-analyzer/pi5)
+After=NetworkManager.service
+Wants=network-pre.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/wifi-analyzer/pi5/wifi_scan.py
+Restart=on-failure
+RestartSec=5
+StateDirectory=wifi-analyzer
+RuntimeDirectory=wifi-analyzer
+RuntimeDirectoryPreserve=yes
+# iw scans and the regulatory domain need root's network admin rights; the rest of the system stays read-only
+ProtectSystem=strict
+ReadWritePaths=/var/lib/wifi-analyzer /run/wifi-analyzer
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

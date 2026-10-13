@@ -124,6 +124,24 @@ static void groupFrames() {
   CHECK(gf::encodeAdv(f, adv, 26) == 0);
 }
 
+// The shared vector in testdata/group-frame.tsv: the Python decoder (pi5, web) reads the same bytes.
+static void sharedVector(const char *path) {
+  std::ifstream in(path);
+  CHECK(in.good());
+  std::string line, hex;
+  while (std::getline(in, line)) if (!line.empty() && line[0] != '#') { hex = line.substr(0, line.find('\t')); break; }
+  gf::Frame f;
+  f.kind = gf::KIND_TDECK; f.id = 0x99ad; f.seq = 200; f.flags = gf::F_SCAN | gf::F_TRACKING | gf::F_HW_DISPLAY;
+  f.nets = 42; f.pax = 513;
+  for (int c = 1; c <= 13; c++) f.chcount[c] = (uint8_t)c;
+  f.bestCh = 6; f.bestDbm = -38; f.trackCh = 11; f.trackDbm = -77; f.ageS = 3;
+  uint8_t adv[31];
+  size_t n = gf::encodeAdv(f, adv, sizeof adv);
+  char got[80] = "";
+  for (size_t i = 0; i < n; i++) snprintf(got + 2 * i, 3, "%02x", adv[i]);
+  CHECK_STR(got, hex);
+}
+
 static void peers() {
   gf::PeerTable<2> t;
   gf::Frame a; a.kind = gf::KIND_PAX; a.id = 1;
@@ -139,6 +157,7 @@ static void peers() {
 
 int main(int argc, char **argv) {
   channelsFromFixture(argc > 1 ? argv[1] : "lab/wifi-analyzer/testdata/channel-cases.tsv");
+  sharedVector(argc > 2 ? argv[2] : "lab/wifi-analyzer/testdata/group-frame.tsv");
   fields(); grades(); history(); channels(); groupFrames(); peers();
   printf("common: %d checks, %d failed\n", checks, fails);
   return fails ? 1 : 0;

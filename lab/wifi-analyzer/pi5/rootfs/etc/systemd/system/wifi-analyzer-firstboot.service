@@ -1,0 +1,13 @@
+[Unit]
+Description=Wi-Fi analyzer: install the bundled packages once (usbmuxd, for iPhone USB tethering)
+ConditionPathExistsGlob=/opt/wifi-analyzer/debs/*.deb
+Before=wifi-analyzer-scan.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'dpkg -i /opt/wifi-analyzer/debs/*.deb && mkdir -p /opt/wifi-analyzer/debs-installed && mv /opt/wifi-analyzer/debs/*.deb /opt/wifi-analyzer/debs-installed/'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

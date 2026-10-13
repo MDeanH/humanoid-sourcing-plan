@@ -176,6 +176,20 @@ class Http(unittest.TestCase):
         _, _, body = self.get("/api/track?bssid=aa:aa:aa:aa:aa:01")
         self.assertEqual(len(json.loads(body)["points"]), 2)
 
+    def test_group(self):
+        _, _, body = self.get("/api/state")
+        self.assertEqual(json.loads(body)["group"], [])
+        now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with open(os.path.join(HERE, "..", "testdata", "group-frame.tsv")) as f:
+            hexv = [l for l in f if l.strip() and not l.startswith("#")][0].split("\t")[0]
+        frame = a.decode_group_adv(bytes.fromhex(hexv))
+        with open(os.path.join(self.rundata.dir, "group.tsv"), "a") as f:
+            f.write(a.group_line(now, frame, -61) + "\n" + "junk line\n")
+        _, _, body = self.get("/api/state")
+        g = json.loads(body)["group"]
+        self.assertEqual([(m["kind"], m["id"], m["pax"], m["advert_rssi"]) for m in g], [("T-Deck", "99ad", 513, -61)])
+        self.assertLessEqual(g[0]["age_s"], 5)
+
     def test_ping_probe_note(self):
         self.assertEqual(self.get("/api/ping?s=1")[0], 200)
         t = dt.datetime.now(dt.timezone.utc).timestamp() * 1000

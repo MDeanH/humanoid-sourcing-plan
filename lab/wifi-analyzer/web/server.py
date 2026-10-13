@@ -66,7 +66,9 @@ class Run:
         self.scan = analyzer.ScanState()
         self.scan_tail = Tail(os.path.join(run_dir, "airscan.tsv"))
         self.link_tail = Tail(os.path.join(run_dir, "linklog.tsv"))
+        self.group_tail = Tail(os.path.join(run_dir, "group.tsv"))   # written on a Pi 5 by group_listen.py
         self.link = None
+        self.group = {}
         self.probe_lines = 0
 
     def refresh(self):
@@ -75,8 +77,12 @@ class Run:
                 self.scan.add_line(line)
             for line in self.link_tail.new_lines():
                 r = analyzer.parse_link_line(line)
-                if r:
+                if r and (r["connected"] or self.link is None or self.link["t"] <= r["t"]):
                     self.link = r
+            for line in self.group_tail.new_lines():
+                r = analyzer.parse_group_line(line)
+                if r:
+                    self.group[(r["kind"], r["id"])] = r
 
     def append(self, name, lines):
         if not lines:
@@ -151,7 +157,11 @@ def make_handler(run, run_name):
                 window = int((q.get("window") or ["900"])[0]) if (q.get("window") or ["900"])[0].isdigit() else 900
                 with run.lock:
                     nets = run.scan.networks(now=now, window_s=window or None)
-                    body = {"run": run_name, "now": analyzer.iso(now), "window_s": window,
+                    group = []
+                    for g in sorted(run.group.values(), key=lambda g: (g["kind"], g["id"])):
+                        t = analyzer.parse_iso(g["t"])
+                        group.append(dict(g, age_s=int((now - t).total_seconds()) if t else None))
+                    body = {"run": run_name, "now": analyzer.iso(now), "window_s": window, "group": group,
                             "networks": nets, "channels": analyzer.channels(nets),
                             "scans": len(run.scan.scans), "bad_lines": run.scan.bad_lines,
                             "link": run.link, "thresholds": {"good_dbm": analyzer.GOOD_DBM, "poor_dbm": analyzer.POOR_DBM,

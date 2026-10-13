@@ -36,8 +36,9 @@ async function refreshState() {
     document.querySelectorAll(".win").forEach((e) => (e.textContent = `${Math.round(state.window_s / 60)} min`));
     renderChannels();
     renderNetworks();
+    renderGroup();
   } catch (e) {
-    $("#status").textContent = "Mac not reachable";
+    $("#status").textContent = "Scanner not reachable";
   }
 }
 
@@ -62,8 +63,8 @@ function renderChannels() {
   }
   $("#chanbands").innerHTML = html;
   const l = state.link;
-  $("#maclink").innerHTML = !l ? "Mac link: no linklog.tsv yet" : !l.connected ? "Mac link: not connected" :
-    `Mac's own link (${esc(l.device)}): <b class="${dbmGrade(l.dbm)}">${l.dbm} dBm</b>, noise ${l.noise ?? "–"} dBm, ` +
+  $("#maclink").innerHTML = !l ? "This computer's link: not logged (on a Pi, only when it is joined to a network)" : !l.connected ? "This computer's link: not connected" :
+    `This computer's own link (${esc(l.device)}): <b class="${dbmGrade(l.dbm)}">${l.dbm} dBm</b>, noise ${l.noise ?? "–"} dBm, ` +
     `channel ${esc(l.ch || "–")}, ${l.rate ?? "–"} Mbit/s <span class="dim">at ${esc(l.t)}</span>`;
 }
 
@@ -71,8 +72,25 @@ function renderNetworks() {
   $("#netlist").innerHTML = state.networks.map((n) =>
     `<li data-bssid="${n.bssid}"><b class="${n.grade}">${n.dbm}</b><span class="dim">${esc(n.ch)}</span>` +
     `<span class="name">${esc(n.name || "(hidden)")}</span><span class="sub">${n.bssid} · ${ago(n.age_s)}</span></li>`).join("") ||
-    `<li class="dim">Nothing heard yet. Is the Mac app running with Location Services allowed?</li>`;
+    `<li class="dim">Nothing heard yet. Is the scanner running (the Mac app with Location Services allowed, or the Pi)?</li>`;
 }
+function renderGroup() {
+  const g = state.group || [];
+  $("#groupbtn").hidden = g.length === 0;
+  $("#grouplist").innerHTML = g.map((m) => {
+    const stale = m.age_s == null || m.age_s > 15;
+    let what = m.flags & 16 ? `<b>${m.pax}</b> Wi-Fi devices counted (last minute)`
+      : m.flags & 1 ? `<b>${m.nets}</b> networks, strongest ch ${m.best_ch} <b class="${dbmGrade(m.best_dbm)}">${m.best_dbm} dBm</b>`
+      : "no data yet";
+    if (m.flags & 8) what += `<br>tracking ch ${m.track_ch}: <b class="${dbmGrade(m.track_dbm)}">${m.track_dbm} dBm</b>`;
+    const busiest = m.chcount.map((n, i) => [n, i + 1]).filter((x) => x[0]).sort((a, b) => b[0] - a[0]).slice(0, 3)
+      .map((x) => `ch ${x[1]}: ${x[0]}`).join(", ");
+    return `<div class="card"><div><b>${esc(m.kind)} ${esc(m.id)}</b> <span class="dim small">${stale ? "not heard for " : "heard "}` +
+      `${ago(m.age_s)} · advert ${m.advert_rssi} dBm</span></div><div class="small">${what}</div>` +
+      (busiest ? `<div class="dim small">busiest: ${busiest}${m.flags & 4 ? " · logging to SD" : ""}${m.flags & 2 ? " · paused" : ""}</div>` : "") + `</div>`;
+  }).join("");
+}
+
 $("#netlist").addEventListener("click", (e) => {
   const li = e.target.closest("li[data-bssid]");
   if (!li) return;
@@ -201,13 +219,13 @@ $("#notebtn").addEventListener("click", async () => {
     const d = await r.json();
     $("#notestatus").textContent = r.ok ? `Saved: ${d.line}` : `Not saved: ${d.error}`;
   } catch (e) {
-    $("#notestatus").textContent = "Not saved: the Mac is not reachable. Try again when the link is back.";
+    $("#notestatus").textContent = "Not saved: the server is not reachable. Try again when the link is back.";
   }
 });
 
 // ---- loops ---------------------------------------------------------------------------------------------------
 refreshState();
-setInterval(() => { if (view === "channels" || view === "networks") refreshState(); }, 3000);
+setInterval(() => { if (view === "channels" || view === "networks" || view === "group") refreshState(); }, 3000);
 setInterval(() => { if (view === "track") refreshTrack(); }, 5000);
 setInterval(flush, 2000);
 $("#pending").textContent = pending.length;

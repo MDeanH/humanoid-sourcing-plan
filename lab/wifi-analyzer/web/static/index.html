@@ -21,12 +21,13 @@
     <button data-view="networks">Networks</button>
     <button data-view="track">Track</button>
     <button data-view="link">Link test</button>
+    <button data-view="group" id="groupbtn" hidden>Group</button>
   </nav>
 </header>
 
 <main>
   <section id="channels" class="view on">
-    <p class="dim small">Networks the Mac heard in the last <span class="win">15 min</span>, per channel. Bar colour is the strongest signal there. 1, 6 and 11 are the 2.4 GHz channels that do not overlap; DFS channels (5 GHz 52-144) can force a channel change mid-show.</p>
+    <p class="dim small">Networks heard in the last <span class="win">15 min</span>, per channel. Bar colour is the strongest signal there. 1, 6 and 11 are the 2.4 GHz channels that do not overlap; DFS channels (5 GHz 52-144) can force a channel change mid-show.</p>
     <div id="chanbands"></div>
     <div id="maclink" class="card small"></div>
   </section>
@@ -39,7 +40,12 @@
   <section id="track" class="view">
     <div id="trackhead" class="card"><p class="dim">Pick a network on Networks.</p></div>
     <svg id="trackchart" viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="signal over time"></svg>
-    <p class="dim small">Each point is one time the Mac heard it. Green dashes: -67 dBm (good or better above). Red dashes: -75 dBm (poor below).</p>
+    <p class="dim small">Each point is one time the scanner (Mac or Pi) heard it. Green dashes: -67 dBm (good or better above). Red dashes: -75 dBm (poor below).</p>
+  </section>
+
+  <section id="group" class="view">
+    <p class="dim small">The boards' Bluetooth reports, as heard by this computer. The T-Deck, LoRa32 and watch hear 2.4 GHz only.</p>
+    <div id="grouplist"></div>
   </section>
 
   <section id="link" class="view">
@@ -53,7 +59,7 @@
       <button id="pingtoggle" class="primary">Start link test</button>
       <button id="notebtn">Add note</button>
     </div>
-    <p class="dim small">This phone asks the Mac for a tiny reply every 500 ms and times it. No reply within 2 s counts as lost. Results go to <code>iphone-probe.tsv</code> on the Mac; if the link drops they wait on the phone and are sent when it comes back (<span id="pending">0</span> waiting). Under 50 ms is good, 250 ms or more is poor (FIRST). Keep the screen on while it runs.</p>
+    <p class="dim small">This phone asks the server (Mac or Pi) for a tiny reply every 500 ms and times it. No reply within 2 s counts as lost. Results go to <code>iphone-probe.tsv</code> on the server; if the link drops they wait on the phone and are sent when it comes back (<span id="pending">0</span> waiting). Under 50 ms is good, 250 ms or more is poor (FIRST). Keep the screen on while it runs.</p>
     <p id="notestatus" class="small"></p>
   </section>
 </main>

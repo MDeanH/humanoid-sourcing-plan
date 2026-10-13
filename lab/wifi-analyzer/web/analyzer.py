@@ -183,6 +183,75 @@ def note_line(t, text):
     return "%s\t%s" % (t, clean_note(text))
 
 
+# ---- group adverts (format in common/wifilogic/src/groupframe.h) -----------------------------------------------
+
+KINDS = {1: "T-Deck", 2: "LoRa32", 3: "Watch", 4: "Mac"}
+F_SCAN, F_PAUSED, F_LOGGING, F_TRACKING, F_PAX, F_HW_DISPLAY, F_HW_INPUT = 1, 2, 4, 8, 16, 32, 64
+
+
+def _s8(b):
+    return b - 256 if b > 127 else b
+
+
+def decode_group_msd(m):
+    """Manufacturer data (company ID first) -> dict, or None if it is not one of ours."""
+    if len(m) < 25 or m[0] != 0xFF or m[1] != 0xFF:
+        return None
+    p = m[2:]
+    if p[0:2] != b"RW" or p[2] != 1:
+        return None
+    if not 1 <= p[3] <= 4:
+        return None
+    ch = [0] * 14
+    for c in range(1, 14):
+        b = p[11 + (c - 1) // 2]
+        ch[c] = (b & 0x0F) if (c & 1) else (b >> 4)
+    return {"kind": KINDS[p[3]], "id": "%04x" % (p[4] | p[5] << 8), "seq": p[6], "flags": p[7], "nets": p[8],
+            "pax": p[9] | p[10] << 8, "chcount": ch[1:], "best_ch": p[18], "best_dbm": _s8(p[19]),
+            "track_ch": p[20], "track_dbm": _s8(p[21]), "age_s": p[22]}
+
+
+def decode_group_adv(adv):
+    """Raw advertisement data (a list of AD structures) -> dict, or None."""
+    i = 0
+    while i < len(adv):
+        n = adv[i]
+        if n == 0 or i + 1 + n > len(adv):
+            return None
+        if adv[i + 1] == 0xFF:
+            r = decode_group_msd(bytes(adv[i + 2:i + 1 + n]))
+            if r:
+                return r
+        i += 1 + n
+    return None
+
+
+def group_line(t, frame, advert_rssi):
+    """group.tsv: time, kind, id, seq, flags, nets, pax, best_ch, best_dbm, track_ch, track_dbm, advert_rssi,
+    networks on channels 1..13 (comma-separated)."""
+    f = frame
+    return "\t".join(str(v) for v in (t, f["kind"], f["id"], f["seq"], f["flags"], f["nets"], f["pax"], f["best_ch"],
+                                      f["best_dbm"], f["track_ch"], f["track_dbm"], advert_rssi,
+                                      ",".join(str(c) for c in f["chcount"])))
+
+
+def parse_group_line(line):
+    f = line.rstrip("\r\n").split("\t")
+    if len(f) != 13 or f[1] not in KINDS.values():
+        return None
+    try:
+        nums = [int(v) for v in f[3:12]]
+        chs = [int(v) for v in f[12].split(",")]
+    except ValueError:
+        return None
+    if len(chs) != 13:
+        return None
+    keys = ("seq", "flags", "nets", "pax", "best_ch", "best_dbm", "track_ch", "track_dbm", "advert_rssi")
+    r = {"t": f[0], "kind": f[1], "id": f[2], "chcount": chs}
+    r.update(zip(keys, nums))
+    return r
+
+
 def parse_link_line(line):
     """The Mac's own link from linklog.tsv ('link' lines only)."""
     f = line.rstrip("\r\n").split("\t")
