@@ -80,6 +80,25 @@ Standard-library Python on port 8765. On the iPhone, open `http://fridays-Mac-mi
 
 Anyone on the same network can open the page while the server runs. Stop it when done.
 
+### Location map
+
+Indoors, GPS does not work, and Safari gives a plain-HTTP page no location anyway. So the map is a walk-and-tap survey, the way Wi-Fi site surveys are done:
+
+1. On Map, tap "Floor plan…" and choose a photo or screenshot of the hall plan or a booth sketch (JPEG, PNG, WebP or HEIC). With no plan, a plain grid is shown.
+2. Start the link test on Link. Optionally pick the robot's network on Track, and have a T-Deck track it.
+3. Walk to each spot the robot or the operator will use. Tap "Mark where I am", tap the spot on the plan, and name it.
+
+Each spot records:
+
+- the last 20 s of the phone's link test (round trip, losses);
+- the T-Deck's tracked signal, if a T-Deck tracked something within the last 15 s;
+- the scanner's latest reading of the network picked on Track, if it is under 30 s old;
+- the LoRa32's crowd count, if under 2 minutes old.
+
+A reading older than that was measured somewhere else, so it is left out. Only devices that walk with you measure the spot: the phone, the T-Deck, a carried Pi. A Mac on a desk measures the desk.
+
+The map colours each spot and fills the area between spots by inverse-distance weighting, out to about a fifth of the plan and no further. The colour shows the measure you choose: phone round trip, phone losses, T-Deck signal, scanner signal or crowd. Green is good, yellow fair, red poor, using the -67/-75 dBm and 50/250 ms limits; for losses, good is 1% or less and poor 5% or more (our choice). Spots go to `map-points.tsv` (append-only; "Undo last" appends an undo line) and the plan to `floorplan.<ext>`, both in the run folder. `lab/survey-summary.sh` writes `summary/map.tsv`: one row per spot with its readings and its worst grade.
+
 ## T-Deck (`tdeck/`)
 
 PlatformIO, Arduino framework, ESP32-S3. `build.sh` fetches LilyGO's T-Deck repo at the commit whose pins were checked (for their patched TFT_eSPI) and writes `build/tdeck-wifi-analyzer.bin`, one image for 0x0.

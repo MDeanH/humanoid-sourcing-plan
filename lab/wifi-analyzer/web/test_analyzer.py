@@ -114,6 +114,37 @@ class State(unittest.TestCase):
         self.assertEqual(len(all_nets), 3)
 
 
+class Map(unittest.TestCase):
+    def test_point_freshness(self):
+        scan = {"t": "2026-10-13T18:59:50Z", "bssid": "aa:aa:aa:aa:aa:01", "dbm": -63}
+        group = [{"t": "2026-10-13T18:59:55Z", "kind": "T-Deck", "flags": a.F_TRACKING | a.F_SCAN, "track_dbm": -71, "track_ch": 11},
+                 {"t": "2026-10-13T18:58:30Z", "kind": "LoRa32", "flags": a.F_PAX, "pax": 37},
+                 {"t": "2026-10-13T18:50:00Z", "kind": "T-Deck", "flags": a.F_TRACKING, "track_dbm": -40, "track_ch": 1}]
+        p = a.make_map_point(NOW, {"x": 0.25, "y": 0.5, "label": "booth\tfront", "phone": {"n": 40, "lost": 2, "avg_ms": 31.26}}, scan, group)
+        self.assertEqual((p["x"], p["y"], p["label"]), (0.25, 0.5, "booth front"))
+        self.assertEqual((p["phone_n"], p["phone_loss_pct"], p["phone_ms"]), (40, 5.0, 31.3))
+        self.assertEqual((p["scan_dbm"], p["scan_age_s"]), (-63, 10))
+        self.assertEqual((p["tdeck_dbm"], p["tdeck_ch"], p["pax"]), (-71, 11, 37))   # the 10-minute-old T-Deck report is ignored
+        old = a.make_map_point(NOW, {"x": 1, "y": 0}, dict(scan, t="2026-10-13T18:58:00Z"), [])
+        self.assertNotIn("scan_dbm", old)          # 2 min old: measured somewhere else
+        self.assertNotIn("phone_ms", old)
+        with self.assertRaises(ValueError):
+            a.make_map_point(NOW, {"x": 1.5, "y": 0}, None, [])
+
+    def test_lines_and_undo(self):
+        p1 = a.make_map_point(NOW, {"x": 0.1, "y": 0.2, "label": "a"}, None, [])
+        p2 = a.make_map_point(NOW, {"x": 0.3, "y": 0.4, "label": "b", "phone": {"n": 2, "lost": 1, "avg_ms": 10}}, None, [])
+        undo = a.map_point_line({"t": "t", "x": 0, "y": 0, "label": a.UNDO})
+        lines = [a.map_point_line(p1), a.map_point_line(p2), undo, a.map_point_line(p2), "junk"]
+        self.assertEqual(len(a.map_point_line(p1).split("\t")), len(a.MAP_FIELDS))
+        pts = a.parse_map_points(lines)
+        self.assertEqual([p["label"] for p in pts], ["a", "b"])
+        self.assertEqual((pts[1]["phone_loss_pct"], pts[1]["phone_ms"], pts[0]["phone_ms"]), (50.0, 10.0, None))
+        self.assertEqual(a.parse_map_points([undo, undo]), [])
+        spoof = a.make_map_point(NOW, {"x": 0, "y": 0, "label": a.UNDO}, None, [])   # a label cannot fake an undo
+        self.assertEqual(a.parse_map_points([a.map_point_line(p1), a.map_point_line(spoof)])[1]["label"], "undo")
+
+
 class Http(unittest.TestCase):
     """Starts the real server on a free port against a temporary run folder."""
 
@@ -189,6 +220,28 @@ class Http(unittest.TestCase):
         g = json.loads(body)["group"]
         self.assertEqual([(m["kind"], m["id"], m["pax"], m["advert_rssi"]) for m in g], [("T-Deck", "99ad", 513, -61)])
         self.assertLessEqual(g[0]["age_s"], 5)
+
+    def test_map(self):
+        png = server.icon_png(16)
+        req = urllib.request.Request(self.base + "/api/floorplan", data=png, method="POST", headers={"Content-Type": "image/png"})
+        with urllib.request.urlopen(req) as r:
+            self.assertEqual(r.status, 200)
+        code, ctype, body = self.get("/floorplan")
+        self.assertEqual((code, ctype, body), (200, "image/png", png))
+        bad = urllib.request.Request(self.base + "/api/floorplan", data=b"x", method="POST", headers={"Content-Type": "text/plain"})
+        with self.assertRaises(urllib.error.HTTPError):
+            urllib.request.urlopen(bad)
+        code, d = self.post("/api/mark", {"x": 0.5, "y": 0.5, "label": "centre", "bssid": "aa:aa:aa:aa:aa:01",
+                                          "phone": {"n": 40, "lost": 0, "avg_ms": 22}})
+        self.assertEqual(code, 200)
+        self.assertEqual(d["point"]["scan_dbm"], -60)          # the scanner heard that network moments ago
+        self.assertEqual(self.post("/api/mark", {"x": "left", "y": 0})[0], 400)
+        _, _, body = self.get("/api/map")
+        m = json.loads(body)
+        self.assertTrue(m["floorplan"])
+        self.assertEqual([p["label"] for p in m["points"]], ["centre"])
+        code, d = self.post("/api/map/undo", {})
+        self.assertEqual((code, d["points"]), (200, []))
 
     def test_ping_probe_note(self):
         self.assertEqual(self.get("/api/ping?s=1")[0], 200)

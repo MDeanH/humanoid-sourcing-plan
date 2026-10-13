@@ -46,6 +46,8 @@ grep -q "1 replies at 250 ms or more" "$TMP/mac.out" || fail "iPhone slow replie
 grep -q "Channels (.*), 2 scans" "$TMP/mac.out" || fail "Mac scan count"
 grep -Eq "^6g37 +1 +0 +-80" "$TMP/mac.out" || fail "6 GHz channel row"
 grep -Eq "^5g100 +1 +0 +-77 +- +- +DFS" "$TMP/mac.out" || fail "DFS flag"
+grep -Eq "^9 +2026-10-13T19:44:00Z +near the robot AP +22.0 +0.0 +-78 +-71 +37 +poor" "$TMP/mac.out" || fail "map spot verdict (T-Deck -78 is poor)"
+grep -Eq "^7 +.* far corner .* poor" "$TMP/mac.out" || fail "map spot 7"
 grep -Eq "^2g11 +2 +2 +-54" "$TMP/tdeck.out" || fail "T-Deck uptime-stamped lines"
 grep -q "Channels (.*), 2 scans" "$TMP/tdeck.out" || fail "T-Deck scan count"
 grep -Eq "^5g36 +1 +1 +-71 +25 +-92" "$TMP/pi5.out" || fail "Pi 5 lines with channel-busy share from survey.tsv"

@@ -10,11 +10,13 @@
 #   OURS         our own network name, flagged in the channel table      example: OURS=A2-LAB
 #   CAPTURE_DIR  where runs are stored                                    default: ~/robot-lab-captures
 #
-# iphone-probe.tsv is the phone's link test from lab/wifi-analyzer/web/server.py, in linklog.tsv's ping format.
+# iphone-probe.tsv is the phone's link test from lab/wifi-analyzer/web/server.py, in linklog.tsv's ping format;
+# map-points.tsv is that dashboard's walk-and-tap location map.
 #
 # Output in ~/robot-lab-captures/<run-name>/summary/:
 #   link.txt       per device: samples, losses and the longest outage with its start time, signal spread
 #   channels.tsv   per channel: networks heard, how many at -75 dBm or stronger, the strongest, busy share, noise
+#   map.tsv        per tapped spot: phone round trip and losses, T-Deck and scanner signal, crowd, worst grade
 # Rough guide (sources in lab/venue-dropouts.md): signal at -67 dBm or better is good and below -75 dBm is poor;
 # round trip under 50 ms is responsive and 250 ms or more is poor.
 set -euo pipefail
@@ -143,4 +145,26 @@ if [ -s "$DIR/airscan.tsv" ] || [ -s "$DIR/survey.tsv" ]; then
   awk -F'\t' '{ for (i = 1; i <= NF; i++) { v[NR, i] = ($i == "" ? "-" : $i); if (length(v[NR, i]) > w[i]) w[i] = length(v[NR, i]) }
                 if (NF > nf) nf = NF }
               END { for (r = 1; r <= NR; r++) { for (i = 1; i <= nf; i++) printf("%-" w[i] "s  ", v[r, i]); printf "\n" } }' "$OUT/channels.tsv"
+fi
+
+if [ -s "$DIR/map-points.tsv" ]; then   # time, x, y, label, phone ms, loss %, pings, BSSID, scan dBm, age, T-Deck dBm, ch, crowd
+  awk -F'\t' -v OFS='\t' '
+    function g_ms(v)   { return v == "" ? "" : (v + 0 < 50 ? "good" : (v + 0 >= 250 ? "poor" : "fair")) }
+    function g_loss(v) { return v == "" ? "" : (v + 0 <= 1 ? "good" : (v + 0 >= 5 ? "poor" : "fair")) }
+    function g_dbm(v)  { return v == "" ? "" : (v + 0 >= -67 ? "good" : (v + 0 < -75 ? "poor" : "fair")) }
+    function worse(a, b) { return (a == "poor" || b == "poor") ? "poor" : ((a == "fair" || b == "fair") ? "fair" : (a != "" ? a : b)) }
+    NF == 13 { if ($4 == "#undo") { if (n) n--; next } line[++n] = $0 }
+    END {
+      print "spot", "time", "label", "phone ms", "phone lost %", "T-Deck dBm", "scanner dBm", "crowd", "worst"
+      for (i = 1; i <= n; i++) {
+        split(line[i], f, "\t")
+        w = worse(worse(g_ms(f[5]), g_loss(f[6])), worse(g_dbm(f[11]), g_dbm(f[9])))
+        print i, f[1], (f[4] == "" ? "(no label)" : f[4]), f[5], f[6], f[11], f[9], f[13], (w == "" ? "no readings" : w)
+      }
+    }' "$DIR/map-points.tsv" > "$OUT/map.tsv"
+  echo
+  echo "Map spots ($OUT/map.tsv):"
+  awk -F'\t' '{ for (i = 1; i <= NF; i++) { v[NR, i] = ($i == "" ? "-" : $i); if (length(v[NR, i]) > w[i]) w[i] = length(v[NR, i]) }
+                if (NF > nf) nf = NF }
+              END { for (r = 1; r <= NR; r++) { for (i = 1; i <= nf; i++) printf("%-" w[i] "s  ", v[r, i]); printf "\n" } }' "$OUT/map.tsv"
 fi

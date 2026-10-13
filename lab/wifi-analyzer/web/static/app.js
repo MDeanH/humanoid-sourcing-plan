@@ -19,6 +19,7 @@ function show(v) {
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
   document.querySelectorAll(".view").forEach((s) => s.classList.toggle("on", s.id === v));
   if (v === "track") refreshTrack();
+  if (v === "map") refreshMap();
 }
 document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => show(b.dataset.view)));
 
@@ -223,10 +224,154 @@ $("#notebtn").addEventListener("click", async () => {
   }
 });
 
+// ---- location map ----------------------------------------------------------------------------------------------
+// Each metric: how to grade it (good/poor limits, and whether higher is better) and how to show it.
+const METRICS = {
+  phone_ms: { good: GOOD_MS, poor: POOR_MS, higher: false, fmt: (v) => `${Math.round(v)} ms` },
+  phone_loss_pct: { good: 1, poor: 5, higher: false, fmt: (v) => `${v}% lost` },
+  tdeck_dbm: { good: GOOD_DBM, poor: POOR_DBM, higher: true, fmt: (v) => `${v} dBm` },
+  scan_dbm: { good: GOOD_DBM, poor: POOR_DBM, higher: true, fmt: (v) => `${v} dBm` },
+  pax: { neutral: true, fmt: (v) => `${v} devices` },
+};
+let mapPoints = [], marking = false, planVersion = -1;
+
+// 0 = good, 1 = poor, linear in between (clamped)
+function badness(m, v) {
+  const d = METRICS[m];
+  const t = d.higher ? (d.good - v) / (d.good - d.poor) : (v - d.good) / (d.poor - d.good);
+  return Math.max(0, Math.min(1, t));
+}
+function rgb(t) {   // green -> yellow -> red
+  const g = [60, 207, 126], y = [242, 201, 76], r = [255, 90, 82];
+  const [a, b, u] = t < 0.5 ? [g, y, t * 2] : [y, r, (t - 0.5) * 2];
+  return a.map((c, i) => Math.round(c + (b[i] - c) * u));
+}
+function colourFor(m, v, all) {
+  if (METRICS[m].neutral) {   // crowd: light to dark blue across what was seen
+    const lo = Math.min(...all), hi = Math.max(...all), u = hi > lo ? (v - lo) / (hi - lo) : 0.5;
+    return [Math.round(200 - 160 * u), Math.round(220 - 120 * u), 255];
+  }
+  return rgb(badness(m, v));
+}
+const gradeWord = (m, v) => (METRICS[m].neutral ? "" : (b => b === 0 ? "good" : b === 1 ? "poor" : "fair")(badness(m, v)));
+
+async function refreshMap() {
+  let d;
+  try { d = await getJSON("/api/map"); } catch (e) { return; }
+  mapPoints = d.points;
+  const img = $("#fpimg");
+  if (d.floorplan && d.floorplan_v !== planVersion) {
+    planVersion = d.floorplan_v;
+    img.onload = drawMap;
+    img.src = `/floorplan?v=${d.floorplan_v}`;
+    img.hidden = false;
+    $("#mapwrap").classList.remove("noplan");
+  }
+  drawMap();
+  renderMapList();
+}
+
+function drawMap() {
+  const cv = $("#mapcanvas"), wrap = $("#mapwrap");
+  const W = wrap.clientWidth, H = wrap.clientHeight, dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const m = $("#metric").value;
+  const pts = mapPoints.filter((p) => p[m] != null);
+  const all = pts.map((p) => p[m]);
+  // heat map: inverse-distance weighting on a coarse grid, only near measured spots (no guessing far away)
+  if (pts.length) {
+    const cell = 8, R = 0.22 * Math.max(W, H);
+    for (let y = 0; y < H; y += cell) for (let x = 0; x < W; x += cell) {
+      let ws = 0, vs = 0, near = Infinity;
+      for (const p of pts) {
+        const dx = p.x * W - (x + cell / 2), dy = p.y * H - (y + cell / 2), d2 = dx * dx + dy * dy;
+        near = Math.min(near, d2);
+        const w = 1 / Math.max(d2, 1);
+        ws += w; vs += w * p[m];
+      }
+      if (near > R * R) continue;
+      const [r, g, b] = colourFor(m, vs / ws, all);
+      ctx.fillStyle = `rgba(${r},${g},${b},${0.42 * (1 - Math.sqrt(near) / R) + 0.08})`;
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+  mapPoints.forEach((p, i) => {
+    const v = p[m], X = p.x * W, Y = p.y * H;
+    const [r, g, b] = v == null ? [139, 150, 165] : colourFor(m, v, all);
+    ctx.beginPath(); ctx.arc(X, Y, 9, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.fillStyle = "#000"; ctx.font = "bold 11px -apple-system, system-ui, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(i + 1), X, Y + 0.5);
+  });
+}
+
+function renderMapList() {
+  const m = $("#metric").value;
+  $("#maplist").innerHTML = mapPoints.map((p, i) => {
+    const vals = Object.keys(METRICS).filter((k) => p[k] != null)
+      .map((k) => `<span class="${k === m ? gradeWord(k, p[k]) : ""}">${METRICS[k].fmt(p[k])}</span>`).join(" · ");
+    return `<li><b>${i + 1}</b><span class="name">${esc(p.label || "(no label)")} <span class="dim">${esc(p.t.slice(11, 19))}</span></span>` +
+      `<span class="vals">${vals || '<span class="dim">no readings: start the link test, or track a network</span>'}</span></li>`;
+  }).join("");
+}
+
+$("#metric").addEventListener("change", () => { drawMap(); renderMapList(); });
+window.addEventListener("resize", () => { if (view === "map") drawMap(); });
+$("#markbtn").addEventListener("click", () => {
+  marking = !marking;
+  $("#mapwrap").classList.toggle("marking", marking);
+  $("#markbtn").textContent = marking ? "Tap your spot on the plan…" : "Mark where I am";
+});
+$("#mapcanvas").addEventListener("click", async (e) => {
+  if (!marking) return;
+  marking = false;
+  $("#mapwrap").classList.remove("marking");
+  $("#markbtn").textContent = "Mark where I am";
+  const r = e.target.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  const label = prompt("Name this spot (optional), e.g. booth front, far corner:", "") ?? null;
+  if (label === null) return;
+  const since = Date.now() - 20000;
+  const last = recent.filter((s) => s.t >= since);
+  const ok = last.filter((s) => s.rtt != null).map((s) => s.rtt);
+  const phone = { n: last.length, lost: last.length - ok.length, avg_ms: ok.length ? ok.reduce((a, b) => a + b, 0) / ok.length : null };
+  try {
+    const res = await fetch("/api/mark", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x, y, label, phone, bssid: tracked || "" }) });
+    if (!res.ok) throw new Error((await res.json()).error);
+  } catch (err) {
+    $("#maphint").textContent = `Point not saved: ${err.message || "server not reachable"}`;
+  }
+  refreshMap();
+});
+$("#undobtn").addEventListener("click", async () => {
+  if (!mapPoints.length || !confirm(`Remove point ${mapPoints.length}?`)) return;
+  try { await fetch("/api/map/undo", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); } catch (e) {}
+  refreshMap();
+});
+$("#fpfile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const r = await fetch("/api/floorplan", { method: "POST", headers: { "Content-Type": f.type || "image/jpeg" }, body: f });
+    if (!r.ok) throw new Error((await r.json()).error);
+    planVersion = -1;
+    refreshMap();
+  } catch (err) {
+    $("#maphint").textContent = `Floor plan not saved: ${err.message || "server not reachable"}`;
+  }
+  e.target.value = "";
+});
+
 // ---- loops ---------------------------------------------------------------------------------------------------
 refreshState();
 setInterval(() => { if (view === "channels" || view === "networks" || view === "group") refreshState(); }, 3000);
 setInterval(() => { if (view === "track") refreshTrack(); }, 5000);
+setInterval(() => { if (view === "map" && !marking) refreshMap(); }, 10000);
 setInterval(flush, 2000);
 $("#pending").textContent = pending.length;
 // ?autostart=1 opens the link test and starts it (for a phone set up on a stand, or for testing)

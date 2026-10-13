@@ -15,7 +15,7 @@ header { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: e
 .title { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 6px; font-weight: 600; }
 #status { font-weight: 400; font-size: 13px; }
 nav { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; }
-nav button { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 14px; white-space: nowrap; }
+nav button { flex: 1 1 auto; min-width: 0; padding: 9px 6px; font-size: 13px; white-space: nowrap; }
 button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   padding: 9px 12px; cursor: pointer; }
 button.on { border-color: var(--accent); color: var(--accent); }
@@ -54,3 +54,16 @@ svg { width: 100%; height: 200px; background: var(--panel); border: 1px solid va
 .row { display: flex; gap: 8px; margin: 12px 0; }
 .row button { flex: 1; }
 code { font-size: 12px; }
+#mapwrap { position: relative; margin: 10px 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  background: var(--panel); touch-action: manipulation; }
+#mapwrap.noplan { aspect-ratio: 4 / 3; background-image: linear-gradient(var(--line) 1px, transparent 1px),
+  linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 10% 10%; }
+#mapwrap img { display: block; width: 100%; height: auto; }
+#mapwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mapwrap.marking { outline: 3px solid var(--accent); cursor: crosshair; }
+.filebtn { display: inline-block; flex: 0 0 auto; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel); cursor: pointer; }
+select { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px; flex: 1; min-width: 0; }
+#maplist li { grid-template-columns: 28px 1fr; }
+#maplist li .vals { grid-column: 2; font-size: 13px; }

@@ -198,8 +198,8 @@ The A2 Ultra loses signal inside the convention center. How do we run a signal a
 ## 2026-10-13 — Wi-Fi analyzer on the Mac mini, iPhone, T-Deck, LoRa32 and watch
 
 - Start: 2026-10-13 17:57 UTC
-- End: 2026-10-13 19:40 UTC (approx.)
-- Duration: about 1 hour 45 minutes, building and testing on the real devices at the Mac's desk.
+- End: 2026-10-13 19:27 UTC (commit time; corrected, the first draft of this entry said 19:40)
+- Duration: about 1 hour 30 minutes, building and testing on the real devices at the Mac's desk.
 
 ### Question
 Build a listen-only Wi-Fi signal analyzer across the Mac mini, the iPhone, the T-Deck and (if a Wi-Fi Devboard exists) the Flipper, logging in one format that `lab/survey-summary.sh` reads. Mid-session Michael added the LilyGO LoRa32 (as Paxcounter) and the ESP32 watch, linked as a group that feeds the T-Deck and the watch.
@@ -232,9 +232,9 @@ Build a listen-only Wi-Fi signal analyzer across the Mac mini, the iPhone, the T
 
 ## 2026-10-13 — Raspberry Pi 5 version of the Mac's job
 
-- Start: 2026-10-13 19:35 UTC
-- End: 2026-10-13 20:10 UTC (approx.)
-- Duration: about 35 minutes, on the Mac; no Pi was reachable.
+- Start: 2026-10-13 19:00 UTC (approx.; the Pi request came in during the first entry's work)
+- End: 2026-10-13 19:40 UTC (commit time; corrected, the first draft said 20:10, a guess written before checking the clock)
+- Duration: about 40 minutes, on the Mac; no Pi was reachable.
 
 ### Question
 Build a Raspberry Pi 5 OS that does what the Mac does (scan, log, serve the iPhone), for portability, with the Pi's Wi-Fi limits understood.
@@ -257,3 +257,24 @@ Build a Raspberry Pi 5 OS that does what the Mac does (scan, log, serve the iPho
 - Does iPhone USB tethering need "Allow Others to Join", and does the phone's hotspot Wi-Fi then transmit?
 - Does the raw HCI listener coexist with bluetoothd on the Pi 5 (legacy versus extended scan commands)?
 - Do the bundled .debs install against the image's newer library versions?
+
+## 2026-10-13 — Location map with signal analysis
+
+- Start: 2026-10-13 19:40 UTC
+- End: 2026-10-13 19:47 UTC
+- Duration: about 7 minutes.
+
+### Question
+Add a location map to the signal analysis.
+
+### Sources
+None beyond this repo. GPS does not work indoors, and browsers give the Geolocation API only to secure (HTTPS) pages, so Safari would not offer it on this plain-HTTP dashboard (general knowledge, not tested here).
+
+### Conclusion
+- Built a walk-and-tap map in the dashboard. Upload a floor plan, tap where you stand, and the spot records what the moving devices measure there: the phone's link test over the last 20 s, the T-Deck's tracked signal, the scanner's reading of the tracked network and the LoRa32's crowd count. Each reading is kept only if recent enough, so one measured elsewhere is not attributed to the spot.
+- The map colours spots and fills between them by inverse-distance weighting, limited to the neighbourhood of measured spots. `survey-summary.sh` gains a per-spot table with a worst-of verdict.
+- Tested with unit tests (freshness rules, append-only undo, upload) and in the browser at phone width with synthetic spots. Not yet walked with the real devices.
+
+### Open questions
+- Is a 20 s window per spot right? A shorter one is quicker to walk; a longer one catches more intermittent drops.
+- Should the T-Deck mark spots itself (a key that sends a "mark" in its advert), so the phone is not needed for marking?

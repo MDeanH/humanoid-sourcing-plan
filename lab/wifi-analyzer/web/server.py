@@ -71,6 +71,20 @@ class Run:
         self.group = {}
         self.probe_lines = 0
 
+    def map_points(self):
+        try:
+            with open(os.path.join(self.dir, "map-points.tsv"), encoding="utf-8") as f:
+                return analyzer.parse_map_points(f.read().splitlines())
+        except OSError:
+            return []
+
+    def floorplan(self):
+        for ext, ctype in (("jpg", "image/jpeg"), ("png", "image/png"), ("webp", "image/webp"), ("heic", "image/heic")):
+            p = os.path.join(self.dir, "floorplan." + ext)
+            if os.path.isfile(p):
+                return p, ctype
+        return None, None
+
     def refresh(self):
         with self.lock:
             for line in self.scan_tail.new_lines():
@@ -175,6 +189,16 @@ def make_handler(run, run_name):
                 with run.lock:
                     latest = run.scan.latest.get(bssid)
                     return self.send(200, {"bssid": bssid, "latest": latest, "points": run.scan.track(bssid)})
+            if u.path == "/api/map":
+                fp, _ = run.floorplan()
+                return self.send(200, {"points": run.map_points(), "floorplan": bool(fp),
+                                       "floorplan_v": int(os.path.getmtime(fp)) if fp else 0})
+            if u.path == "/floorplan":
+                fp, ctype = run.floorplan()
+                if not fp:
+                    return self.send(404, {"error": "no floor plan"})
+                with open(fp, "rb") as f:
+                    return self.send(200, f.read(), ctype, "no-cache")
             if u.path in ("/", "/index.html"):
                 return self.static("index.html")
             if u.path == "/icon-180.png":
@@ -195,6 +219,22 @@ def make_handler(run, run_name):
         def do_POST(self):
             u = urlparse(self.path)
             now = dt.datetime.now(dt.timezone.utc)
+            if u.path == "/api/floorplan":   # raw image body from the phone or the Mac
+                ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic"}.get(
+                    (self.headers.get("Content-Type") or "").split(";")[0].strip().lower())
+                n = int(self.headers.get("Content-Length") or 0)
+                if not ext or not 0 < n <= 20_000_000:
+                    return self.send(400, {"error": "send a JPEG, PNG, WebP or HEIC image under 20 MB"})
+                body = self.rfile.read(n)
+                with run.lock:
+                    for old in ("jpg", "png", "webp", "heic"):   # one floor plan per run
+                        p = os.path.join(run.dir, "floorplan." + old)
+                        if os.path.exists(p):
+                            os.replace(p, p + ".old")
+                    with open(os.path.join(run.dir, "floorplan." + ext), "wb") as f:
+                        f.write(body)
+                run.append("runlog.tsv", [analyzer.note_line(analyzer.iso(now), "floor plan set (%d bytes)" % n)])
+                return self.send(200, {"ok": True})
             data = self.read_json()
             if data is None:
                 return self.send(400, {"error": "json body"})
@@ -203,6 +243,24 @@ def make_handler(run, run_name):
                 run.append("iphone-probe.tsv", lines)
                 run.probe_lines += len(lines)
                 return self.send(200, {"written": len(lines)})
+            if u.path == "/api/mark":
+                if not isinstance(data, dict):
+                    return self.send(400, {"error": "json object"})
+                run.refresh()
+                bssid = str(data.get("bssid") or "").lower()
+                with run.lock:
+                    latest = run.scan.latest.get(bssid) if bssid else None
+                    group = list(run.group.values())
+                try:
+                    p = analyzer.make_map_point(now, data, latest, group)
+                except (KeyError, TypeError, ValueError) as e:
+                    return self.send(400, {"error": "bad point: %s" % e})
+                run.append("map-points.tsv", [analyzer.map_point_line(p)])
+                run.append("runlog.tsv", [analyzer.note_line(p["t"], "map point: %s" % (p["label"] or "(no label)"))])
+                return self.send(200, {"point": p})
+            if u.path == "/api/map/undo":
+                run.append("map-points.tsv", [analyzer.map_point_line({"t": analyzer.iso(now), "x": 0, "y": 0, "label": analyzer.UNDO})])
+                return self.send(200, {"points": run.map_points()})
             if u.path == "/api/note":
                 text = analyzer.clean_note(data.get("text") if isinstance(data, dict) else "")
                 if not text:

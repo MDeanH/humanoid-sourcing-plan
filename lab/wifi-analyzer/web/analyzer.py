@@ -252,6 +252,84 @@ def parse_group_line(line):
     return r
 
 
+# ---- location map (walk-and-tap survey) ------------------------------------------------------------------------
+
+MAP_FIELDS = ("t", "x", "y", "label", "phone_ms", "phone_loss_pct", "phone_n", "bssid", "scan_dbm", "scan_age_s",
+              "tdeck_dbm", "tdeck_ch", "pax")
+UNDO = "#undo"
+
+
+def _cell(v):
+    return "" if v is None else str(v)
+
+
+def map_point_line(p):
+    """map-points.tsv: one tapped spot and what the moving devices measured there. Blank = not available."""
+    return "\t".join(_cell(p.get(k)) for k in MAP_FIELDS)
+
+
+def parse_map_points(lines):
+    """Points in order; a line labelled #undo removes the point before it (the file is append-only)."""
+    pts = []
+    for line in lines:
+        f = line.rstrip("\r\n").split("\t")
+        if len(f) != len(MAP_FIELDS):
+            continue
+        p = dict(zip(MAP_FIELDS, f))
+        if p["label"] == UNDO:
+            if pts:
+                pts.pop()
+            continue
+        try:
+            p["x"], p["y"] = float(p["x"]), float(p["y"])
+        except ValueError:
+            continue
+        if not (0 <= p["x"] <= 1 and 0 <= p["y"] <= 1):
+            continue
+        for k in ("phone_ms", "phone_loss_pct"):
+            p[k] = float(p[k]) if p[k] else None
+        for k in ("phone_n", "scan_dbm", "scan_age_s", "tdeck_dbm", "tdeck_ch", "pax"):
+            p[k] = int(p[k]) if p[k] not in ("", None) else None
+        pts.append(p)
+    return pts
+
+
+def make_map_point(now, req, latest_scan, group, fresh_s=30):
+    """Builds a point from the phone's request and what the server knows at that moment.
+
+    req: {"x", "y" (0-1, fractions of the floor plan), "label", "phone": {"n", "lost", "avg_ms"}, "bssid"}
+    latest_scan: the scanner's latest line for req["bssid"] (or None); group: latest group reports.
+    Readings older than fresh_s are left out: they were measured somewhere else.
+    """
+    x, y = float(req["x"]), float(req["y"])
+    if not (0 <= x <= 1 and 0 <= y <= 1):
+        raise ValueError("x and y must be between 0 and 1")
+    p = {"t": iso(now), "x": round(x, 4), "y": round(y, 4), "label": clean_note(req.get("label") or "")[:60].replace("\t", " ")}
+    if p["label"] == UNDO:
+        p["label"] = "undo"
+    ph = req.get("phone") or {}
+    n = ph.get("n")
+    if isinstance(n, int) and n > 0:
+        p["phone_n"] = n
+        p["phone_loss_pct"] = round(100.0 * float(ph.get("lost", 0)) / n, 1)
+        if ph.get("avg_ms") is not None:
+            p["phone_ms"] = round(float(ph["avg_ms"]), 1)
+    if latest_scan:
+        t = parse_iso(latest_scan["t"])
+        if t is not None and (now - t).total_seconds() <= fresh_s:
+            p["bssid"], p["scan_dbm"], p["scan_age_s"] = latest_scan["bssid"], latest_scan["dbm"], int((now - t).total_seconds())
+    for g in group:
+        t = parse_iso(g["t"])
+        age = (now - t).total_seconds() if t else None
+        if age is None:
+            continue
+        if g["kind"] == "T-Deck" and g["flags"] & F_TRACKING and age <= 15:
+            p["tdeck_dbm"], p["tdeck_ch"] = g["track_dbm"], g["track_ch"]
+        if g["kind"] == "LoRa32" and g["flags"] & F_PAX and age <= 120:
+            p["pax"] = g["pax"]
+    return p
+
+
 def parse_link_line(line):
     """The Mac's own link from linklog.tsv ('link' lines only)."""
     f = line.rstrip("\r\n").split("\t")
