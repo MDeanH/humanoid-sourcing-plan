@@ -39,6 +39,8 @@ done
 
 Columns: time, access point address, frequency in MHz, signal in dBm, network name. The parser was tested on sample output, not on a Pi at a venue.
 
+`lab/airscan.sh venue-survey` does the same scan until you stop it, adds the adapter's channel-busy counters where the driver reports them, and prints a per-channel table at the end. See `venue-dropouts.md` for logging the robot's own link during the show.
+
 **Wi-Fi on the Mac mini instead.** Use the Wireless Diagnostics app: hold Option, click the Wi-Fi icon in the menu bar, open Wireless Diagnostics, then choose Window, Scan. It lists nearby networks with channel, band, signal and noise, and suggests channels. Take a screenshot at each spot and time. Do not plan on a scripted log: Apple deprecated the `airport` command in macOS 14.4, its replacement `wdutil` needs sudo, and recent versions redact network names in command-line output unless an app has Location Services permission. A Mac mini with Wi-Fi 6E or 7 also sees 6 GHz, which the Pi 5 cannot. It needs mains power and a screen, so it suits the booth spot; the Pi 5 on a battery pack walks to the other two. Skip the Sniffer window: it records every device's frames on a channel, and that is more than this survey needs. The meshtastic CLI also runs on the Mac, so the Mac can host the T3 instead of the Pi.
 
 **E-stop band, on the Flipper.** With our remote switched off, run the Frequency Analyzer for ten minutes at each spot. It shows only the strongest signal above about -90 dBm, so note every reading within about 1 MHz of the e-stop frequency, with the time. Hits there mean the band is shared on site. Do not use Read RAW at the venue; it would record other people's key fobs and radios.

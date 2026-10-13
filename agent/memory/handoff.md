@@ -25,6 +25,9 @@ Verified in headless Chromium: about 60 behaviour checks pass (`tests/e2e/`, see
 - Lost content: the original "sourcing plan" site (capital estimates, physical space, events, contacts) was never deployed and has no reachable source. The GitHub repo description mentions strain-wave reducer suppliers, a Tesla playbook, capital estimates, events and contacts; if a local copy exists, add it as data to the existing stations.
 - Supplier HQ coordinates and the Allied Motion to Allient rename are from general knowledge and were not verified by search.
 
+## Robot lab
+`lab/` holds passive test procedures for our AgiBot A2 Ultra (network capture, Ethernet, depth recording, LoRa status link) and, as of 2026-10-13, two venue notes: `lab/venue-survey.md` (one-time receive-only RF survey with the Flipper, LilyGO boards, Pi 5 and Mac) and `lab/venue-dropouts.md` (which link drops, logging it through show hours with `linklog.sh`, `airscan.sh` and `survey-summary.sh`, and fixes). None has been run against the real robot yet; open questions are in `RESEARCH_LOG.md`.
+
 ## Repo notes
 - `main` on GitHub is the first commit (the earlier merged site). Work is on `claude/new-session-mnuntz`; draft PR #1 tracks it.
 - Deploy: `netlify deploy --prod` from the repo root, or the Netlify MCP deploy tool (site id `a905d604-59ef-40ea-a382-ae74e6680f47`).

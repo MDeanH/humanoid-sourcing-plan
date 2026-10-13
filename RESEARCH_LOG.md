@@ -159,3 +159,38 @@ Can the Mac mini do the venue survey's Wi-Fi part instead of the Pi 5?
 ### Open questions
 - Which Mac mini model and macOS version does Michael have?
 - Does the Scan window still exist and still show nearby networks unredacted on the current macOS?
+
+## 2026-10-13 — Signal loss at a convention center: survey method and scripts
+
+- Start: 2026-10-13 17:01 UTC (approx.)
+- End: 2026-10-13 17:20 UTC (approx.)
+- Duration: about 19 minutes: twelve searches, three page fetches, writing and stub-testing three scripts, and merging with a parallel session's venue note.
+
+### Question
+The A2 Ultra loses signal inside the convention center. How do we run a signal analysis to prevent it?
+
+### Sources
+- AgiBot A2 Ultra product page https://agibot.com/products/A2_Ultra (Wi-Fi and 4G/5G) and AimDK A2 overview v1.3 https://open.agibot.com/docs/en/aimdk/a2/v1_3/dev_guide/01-a2_overview (Orin hotspot; from V1.2 the x86 Wi-Fi carries internet traffic, else the 5G module; debug ports 192.168.2.50 fixed and DHCP). Fetched.
+- FIRST Tech Challenge wireless troubleshooting at events (ping thresholds, retry rates, interference sources, non-radio causes, jamming illegal). Fetched.
+- Clearpath Robotics Wi-Fi fundamentals (-67 good, -75 poor; 20 MHz in congested spaces; DFS channel breaks; more APs at lower power). Fetched.
+- Supercomputing (SCinet) network policies 2017 to 2026 and ExCeL London wireless policy (exhibitor access points and hotspots banned or need approval). Search snippets only.
+- FCC fines: Marriott $600,000 (2014), Smart City $750,000 (2015) for blocking hotspots at venues. Several news sources agree.
+- Body loss: UCC outdoor body-to-body study (up to 40 dB at 2.45 GHz), a 2 to 6 GHz tissue thesis (loss rises with frequency). Snippets only; no crowd-level figure found.
+- Tools: Apple forum threads on the `airport` CLI retirement in Sonoma 14.4 and `wdutil`; 2017-18 posts on AirPort Utility's iOS scanner; field-test mode guides; tinySA Ultra reviews.
+- Convention center DAS press releases (Las Vegas, San Diego, Hawaii): neutral-host in-building cellular is common but varies by venue and carrier.
+
+### Conclusion
+- First split the problem by link: iPad-to-robot Wi-Fi (control), robot-to-internet (Wi-Fi or 5G), the e-stop remote, or a non-radio cause such as brown-outs while walking. Each has a different fix.
+- Venues commonly ban or require approval for exhibitor access points, which includes the robot's own hotspot; ask the venue's network provider for approval, a clean 5 GHz non-DFS channel, a wired drop, and the DAS carrier list. They may not jam, by FCC precedent.
+- Measure at the booth twice, at load-in and during show hours, because crowds add both bodies in the path and competing radios.
+- Fix order: wire what you can, then a venue-assigned clean channel at 20 MHz, then short line-of-sight links with the access point above the crowd, then neighbour coordination; do not depend on cellular for control.
+- Written up in `lab/venue-dropouts.md`, with `lab/linklog.sh`, `lab/airscan.sh` and `lab/survey-summary.sh`, tested against stubbed `iw`, `ping` and `wdutil` output only.
+- A parallel session wrote `lab/venue-survey.md` (one-time receive-only RF survey: exhibitor rules, Flipper e-stop band, LoRa, Mac scan window) at the same time. I renamed mine, cut the overlap, and cross-linked the two.
+
+### Open questions
+- How does the A2 control app connect: the robot's hotspot, or a network both join? Which Wi-Fi generation and bands does the A2 support?
+- What does the A2 do when the e-stop remote's link drops, and what band does the remote use?
+- Can the control app or the demo run over a wired port?
+- Does the Pi 5's built-in Wi-Fi report station retries and survey (channel busy) counters? Many drivers report only part of them.
+- Is the `wdutil info` format assumed in `linklog.sh` right on the current macOS?
+- Which venue, and what are its wireless policy and in-building cellular carriers? The parallel session's sources tie the 2015 Smart City fine to the Orange County Convention Center, among others; whether that is our venue is unknown.

@@ -92,11 +92,17 @@ rvictl -x <UDID-of-the-iPad>
 - `ethernet-and-scan.md`: the A2's Ethernet port, wired capture, and recording the depth camera. Planning notes, not run yet.
 - `status-link.md`: T-Deck and LilyGO T3 as a LoRa status link. Planning notes, not run yet.
 - `venue-survey.md`: one receive-only radio survey at the convention center with the Flipper, the LilyGO boards and the Pi 5. Planning notes, not run yet.
+- `venue-dropouts.md`: when the robot loses signal at the venue: which link is dropping, logging it through show hours, reading the numbers, and fixes. Uses the three survey scripts below. Not run at a venue yet.
 
 ## Scripts
 
 - `capture.sh <run>`: passive capture, rotating files, notes start and stop.
 - `mark.sh <run> "note"`: timestamped note in `runlog.tsv`.
 - `summarize.sh <run>`: tables from the capture files, using `tshark`.
+- `linklog.sh <run>`: Wi-Fi signal, retries and silences every second, from the hotspot or this machine's link; optional ping with `PING`.
+- `airscan.sh <run>`: every network heard and how busy each channel is, every 30 s. Linux only, on a second adapter.
+- `survey-summary.sh <run>`: outage, signal and channel tables from those two logs.
 
 Tested on Linux with generated traffic: rotation, notes, DNS names and TLS server names all came out correctly. Not yet run on a Mac or a Pi against a real robot.
+
+The three survey scripts were tested on Linux against stubbed `iw`, `ping` and `wdutil` output, including an injected dropout. They have not touched a real Wi-Fi adapter, a Mac, or the robot.
