@@ -107,3 +107,31 @@ The A2 has an Ethernet port: how do we listen on it? How do we scan and record o
 - Does the current Meshtastic firmware still run on the T3 V1.6.1 (silkscreen 20210134)?
 - Is the default Meshtastic channel key public (believed yes, unverified)?
 - Does a Pi 5 keep up with recording RGB-D at full rate?
+
+## 2026-10-13 — Venue RF survey with the Flipper and LilyGO boards
+
+- Start: 2026-10-13 17:06 UTC
+- End: 2026-10-13 17:20 UTC (approx.)
+- Duration: about 15 minutes, mostly searches.
+
+### Question
+How can one analysis with the Flipper Zero and the LilyGO boards help prevent interference with the A2 Ultra at the convention center?
+
+### Sources
+- Flipper docs, Sub-GHz https://docs.flipper.net/zero/sub-ghz (CC1101 bands 300-348, 387-464, 779-928 MHz; Frequency Analyzer exists). The -90 dBm threshold and "strongest signal only" behaviour came from a community mirror of older docs, unverified on current firmware.
+- FCC jammer enforcement https://www.fcc.gov/general/jammer-enforcement (Section 333 and related penalties).
+- Smart City Holdings fine for Wi-Fi blocking at convention centers including OCCC https://www.hotel-online.com/news/fcc-fines-tech-company-over-wi-fi-blocking ; Marriott Gaylord Opryland fine https://test.tsnn.com/node/848966 .
+- Example exhibitor network policies banning exhibitor access points: SC conference https://sc22.supercomputing.org/scinet/scinet-exhibitors/sc-network-policy/index.htm ; a sample contract clause https://lawinsider.com/clause/wireless/_4 . OCCC's own policy was not found.
+- LilyGO T-Deck wiki https://wiki.lilygo.cc/get_started/en/Wearable/T-Deck/T-Deck.html (ESP32-S3, 2.4 GHz Wi-Fi only, SX1262).
+
+### Conclusion
+- The Flipper covers the sub-GHz bands, so it can find the e-stop remote's band (if it is in range) and watch it on site. The LilyGO boards cover 915 MHz LoRa and 2.4 GHz. None of them see 5 GHz, so the Pi 5 does the Wi-Fi survey.
+- Nothing we own can or may stop other people's radios. The survey's value is channel choice, a go or no-go on the e-stop and status link, and data for the venue's IT team.
+- Venue rules may ban exhibitor access points, which would replace the lab Wi-Fi plan with a venue-provided network. Check the exhibitor kit first.
+- Written up in `lab/venue-survey.md`. The Wi-Fi log one-liner was tested only on sample `iw` output.
+- From general knowledge, not searched this session: 2.4 GHz channels 1, 6, 11 do not overlap; US 5 GHz channels 36-48 and 149-165 are outside the radar-sharing range; venue intrusion-prevention systems can contain rogue access points; the Meshtastic screens show signal, SNR and channel use.
+
+### Open questions
+- Which convention center and show, and what does its exhibitor wireless policy say?
+- What band is the A2's e-stop remote on? Does the A2 support 5 GHz Wi-Fi?
+- Does the Flipper own a Wi-Fi devboard? It would add a 2.4 GHz view but not 5 GHz.

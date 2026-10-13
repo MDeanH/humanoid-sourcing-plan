@@ -91,6 +91,7 @@ rvictl -x <UDID-of-the-iPad>
 
 - `ethernet-and-scan.md`: the A2's Ethernet port, wired capture, and recording the depth camera. Planning notes, not run yet.
 - `status-link.md`: T-Deck and LilyGO T3 as a LoRa status link. Planning notes, not run yet.
+- `venue-survey.md`: one receive-only radio survey at the convention center with the Flipper, the LilyGO boards and the Pi 5. Planning notes, not run yet.
 
 ## Scripts
 
