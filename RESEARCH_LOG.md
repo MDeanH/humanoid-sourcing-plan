@@ -194,3 +194,38 @@ The A2 Ultra loses signal inside the convention center. How do we run a signal a
 - Does the Pi 5's built-in Wi-Fi report station retries and survey (channel busy) counters? Many drivers report only part of them.
 - Is the `wdutil info` format assumed in `linklog.sh` right on the current macOS?
 - Which venue, and what are its wireless policy and in-building cellular carriers? The parallel session's sources tie the 2015 Smart City fine to the Orange County Convention Center, among others; whether that is our venue is unknown.
+
+## 2026-10-13 — Wi-Fi analyzer on the Mac mini, iPhone, T-Deck, LoRa32 and watch
+
+- Start: 2026-10-13 17:57 UTC
+- End: 2026-10-13 19:40 UTC (approx.)
+- Duration: about 1 hour 45 minutes, building and testing on the real devices at the Mac's desk.
+
+### Question
+Build a listen-only Wi-Fi signal analyzer across the Mac mini, the iPhone, the T-Deck and (if a Wi-Fi Devboard exists) the Flipper, logging in one format that `lab/survey-summary.sh` reads. Mid-session Michael added the LilyGO LoRa32 (as Paxcounter) and the ESP32 watch, linked as a group that feeds the T-Deck and the watch.
+
+### Sources
+- CoreWLAN SDK headers and the runtime method list of `CWInterface`/`CWNetwork` on macOS 27.2; airportd's unified log during test scans (scan types per channel; the entitlement refusal).
+- Xinyuan-LilyGO/T-Deck at `1dddf6e` (examples/UnitTest/utilities.h, SD.ino, Keyboard_T_Deck_Master.ino, TFT_eSPI Setup210), its README and firmware/README.MD; LilyGO T-Deck wiki pages (the URL in the brief now returns 404; current pages under wiki.lilygo.cc/products/t-deck-series/).
+- https://flasher.meshtastic.org (HTTP 200, lists LILYGO T-Deck) and https://api.meshtastic.org/resource/deviceHardware (T_DECK, target `t-deck`).
+- arduino-esp32 2.0.11 `WiFiScan.cpp` (scan timeout), 2.0.17 and 3.3.10 headers; TFT_eSPI issue #3329.
+- cyberman54/ESP32-Paxcounter at `92784cc` (shared/hal/ttgov21new.h, paxcounter_orig.conf, build.py); libpax `blescan.cpp` (passive BLE scan).
+- `smart_nori_rover/esp32_nodes/nori_watch_control` README and source (watch pins, display init, verification ledger).
+
+### Conclusion
+- A passive Wi-Fi scan cannot be requested on macOS by an ordinary app. The public CoreWLAN scan probes actively on all 2.4 GHz channels, non-radar 5 GHz and the 6 GHz PSC channels (airportd log); the private call with a scan type is refused without Apple's `com.apple.wifi.scan` entitlement. The Mac app therefore reads macOS's own scan cache (per-network age gives the time each was heard) and sends nothing. Idle and connected, this Mac refreshed that cache once in five minutes, so its network log is sparse snapshots. Its link log (every second) works; the network log is unverified until Location Services is allowed.
+- iPhone: the dashboard loaded in Safari on the iPhone 17 Pro Max over Wi-Fi (after one HTTPS attempt, which the server now tolerates) and its link test logged 457 pings, 0 lost, 55 ms average, worst 1.3 s. iOS offers no Wi-Fi scan API, so the phone shows the Mac's scans.
+- T-Deck: every pin in the brief matches LilyGO's examples. Passive scans work after working around core 2.0.11's early "scan failed" (it times out at 20x the dwell while the driver is still scanning). It heard 3-4 networks on 2.4 GHz where the Mac's cache held about 18, most at -80 to -95 dBm; pausing Bluetooth did not help, so its antenna is the likely limit.
+- LoRa32 (T3 V1.6.1, ESP32-PICO-D4) runs Paxcounter built listen-only (LoRaWAN, OTA and boot menu off) with a patch that broadcasts its count. Counts of 2-4 Wi-Fi devices per 60 s window at the desk. It previously ran the Nori teleop remote; no flash backup was taken, at Michael's request; the source is in smart_nori_rover.
+- Watch: the analyzer replaced Nori's watch firmware. Its scans (3-7 networks) and adverts were heard by the T-Deck while it ran on its own battery. Its USB serial worked with this firmware, though the Nori README records that it never had.
+- Group link: non-connectable BLE adverts, 1 per second at 0 dBm, company ID 0xFFFF; T-Deck and watch listen passively. Verified both ways on the bench (T-Deck hears LoRa32 and watch; watch shows LoRa32 and T-Deck, including the T-Deck's tracked network).
+- Flipper: skipped; Michael has no Wi-Fi Devboard.
+- Existing script: `lab/airscan.sh` uses `iw dev <if> scan`, which is an active scan (probe requests); `iw ... scan passive` would match the listen-only rule. Not changed here.
+- Written up in `lab/wifi-analyzer/README.md`; tests in `lab/wifi-analyzer/test.sh`.
+
+### Open questions
+- Does macOS scan more often at the venue (weaker signal, roaming) than at the desk? The Mac's network log depends on it.
+- What does each screen look like on the glass, and do the trackball, keys and watch touch behave? Frame-buffer screenshots were checked; the panels and inputs were not.
+- Were the watch's three unexplained page changes in 90 s phantom touches? A stricter touch check is built but not yet flashed.
+- Does the LoRa32 have an SD card, and does Paxcounter's table on it work?
+- Raspberry Pi 5 version (asked for at the end of the session): its built-in Wi-Fi covers 2.4 and 5 GHz, not 6 GHz; whether brcmfmac honours `iw scan passive` is unverified.

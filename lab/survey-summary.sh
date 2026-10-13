@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Summarize a venue survey run: link quality from linklog.tsv and channel crowding from airscan.tsv and survey.tsv.
+# Summarize a venue survey run: link quality from linklog.tsv and iphone-probe.tsv, channel crowding from airscan.tsv
+# and survey.tsv.
 #
 #   lab/survey-summary.sh <run-name>
 #
@@ -8,6 +9,8 @@
 # Environment (optional):
 #   OURS         our own network name, flagged in the channel table      example: OURS=A2-LAB
 #   CAPTURE_DIR  where runs are stored                                    default: ~/robot-lab-captures
+#
+# iphone-probe.tsv is the phone's link test from lab/wifi-analyzer/web/server.py, in linklog.tsv's ping format.
 #
 # Output in ~/robot-lab-captures/<run-name>/summary/:
 #   link.txt       per device: samples, losses and the longest outage with its start time, signal spread
@@ -23,7 +26,10 @@ OURS="${OURS:-}"
 [ -d "$DIR" ] || { echo "No run at $DIR" >&2; exit 1; }
 mkdir -p "$OUT"
 
-if [ -s "$DIR/linklog.tsv" ]; then
+LINKS=()
+[ -s "$DIR/linklog.tsv" ] && LINKS+=("$DIR/linklog.tsv")
+[ -s "$DIR/iphone-probe.tsv" ] && LINKS+=("$DIR/iphone-probe.tsv")
+if [ "${#LINKS[@]}" -gt 0 ]; then
   awk -F'\t' '
     function seen(k) { if (!(k in order)) { order[k] = ++nk; keys[nk] = k } }
     function sig(k, v) {
@@ -88,7 +94,7 @@ if [ -s "$DIR/linklog.tsv" ]; then
         if (k in imaxat) printf "  longest silence the hotspot heard (inactive time): %d ms at %s\n", imax[k], imaxat[k]
         if (("r" SUBSEP k) in last) printf "  tx retries during run: %d, tx failed: %d\n", tot["r", k], tot["f", k]
       }
-    }' "$DIR/linklog.tsv" > "$OUT/link.txt"
+    }' "${LINKS[@]}" > "$OUT/link.txt"
   echo "Link quality ($OUT/link.txt):"
   cat "$OUT/link.txt"
 fi

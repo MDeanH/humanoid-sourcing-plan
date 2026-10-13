@@ -1,0 +1,8 @@
+{
+  "name": "wifilogic",
+  "version": "1.0.0",
+  "description": "Robot-lab Wi-Fi analyzer shared logic: channel names, log lines, signal history, BLE group frames. Header-only, no Arduino calls.",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": { "srcDir": "src", "includeDir": "src" }
+}

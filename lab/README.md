@@ -93,6 +93,7 @@ rvictl -x <UDID-of-the-iPad>
 - `status-link.md`: T-Deck and LilyGO T3 as a LoRa status link. Planning notes, not run yet.
 - `venue-survey.md`: one receive-only radio survey at the convention center with the Flipper, the LilyGO boards and the Pi 5. Planning notes, not run yet.
 - `venue-dropouts.md`: when the robot loses signal at the venue: which link is dropping, logging it through show hours, reading the numbers, and fixes. Uses the three survey scripts below. Not run at a venue yet.
+- `wifi-analyzer/`: listen-only Wi-Fi analyzer on the Mac mini (with an iPhone dashboard), the T-Deck, the LoRa32 (Paxcounter) and the ESP32 watch, linked as a group, logging in the format `survey-summary.sh` reads. Bench-tested on the devices, not at a venue. See its README.
 
 ## Scripts
 

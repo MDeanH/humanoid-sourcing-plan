@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wi-Fi Lab">
+<meta name="theme-color" content="#0b0e12">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="stylesheet" href="/static/style.css">
+<title>Wi-Fi Lab</title>
+</head>
+<body>
+<header>
+  <div class="title"><span id="run">…</span><span id="status" class="dim">connecting</span></div>
+  <nav>
+    <button data-view="channels" class="on">Channels</button>
+    <button data-view="networks">Networks</button>
+    <button data-view="track">Track</button>
+    <button data-view="link">Link test</button>
+  </nav>
+</header>
+
+<main>
+  <section id="channels" class="view on">
+    <p class="dim small">Networks the Mac heard in the last <span class="win">15 min</span>, per channel. Bar colour is the strongest signal there. 1, 6 and 11 are the 2.4 GHz channels that do not overlap; DFS channels (5 GHz 52-144) can force a channel change mid-show.</p>
+    <div id="chanbands"></div>
+    <div id="maclink" class="card small"></div>
+  </section>
+
+  <section id="networks" class="view">
+    <p class="dim small">Strongest first. Tap one to track it.</p>
+    <ul id="netlist" class="list"></ul>
+  </section>
+
+  <section id="track" class="view">
+    <div id="trackhead" class="card"><p class="dim">Pick a network on Networks.</p></div>
+    <svg id="trackchart" viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="signal over time"></svg>
+    <p class="dim small">Each point is one time the Mac heard it. Green dashes: -67 dBm (good or better above). Red dashes: -75 dBm (poor below).</p>
+  </section>
+
+  <section id="link" class="view">
+    <div class="card">
+      <div class="big"><span id="rtt">–</span><span class="unit">ms</span></div>
+      <div id="rttgrade" class="grade">not running</div>
+      <div class="stats small" id="pingstats"></div>
+    </div>
+    <svg id="pingchart" viewBox="0 0 360 120" preserveAspectRatio="none" role="img" aria-label="round trips"></svg>
+    <div class="row">
+      <button id="pingtoggle" class="primary">Start link test</button>
+      <button id="notebtn">Add note</button>
+    </div>
+    <p class="dim small">This phone asks the Mac for a tiny reply every 500 ms and times it. No reply within 2 s counts as lost. Results go to <code>iphone-probe.tsv</code> on the Mac; if the link drops they wait on the phone and are sent when it comes back (<span id="pending">0</span> waiting). Under 50 ms is good, 250 ms or more is poor (FIRST). Keep the screen on while it runs.</p>
+    <p id="notestatus" class="small"></p>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
