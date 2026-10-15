@@ -1,0 +1,7 @@
+*.pcap
+*.pcapng
+.DS_Store
+.netlify/
+.shots/
+lab/captures/
+node_modules/

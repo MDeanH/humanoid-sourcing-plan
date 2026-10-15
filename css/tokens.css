@@ -1,0 +1,46 @@
+/* Design token contract.
+   Every stylesheet (site stations, the 3D viewer variants) consumes ONLY these custom properties,
+   so the whole site can be re-themed by editing this one file.
+   Language: black canvas, one near-white at stepped opacities, uppercase tracked labels,
+   a mono face for data, 1px hairlines, no cards, no shadows (see docs/design-spec.md). */
+:root {
+  /* surfaces */
+  --bg: #000000;
+  --bg-raised: #0b0b0d;
+  --bg-sunken: #000000;
+  --line: rgba(240, 240, 250, 0.2);
+  --line-strong: rgba(240, 240, 250, 0.4);
+
+  /* text: one near-white at stepped opacities */
+  --text: #f0f0fa;
+  --text-dim: rgba(240, 240, 250, 0.72);
+  --text-faint: rgba(240, 240, 250, 0.5);
+
+  /* accent + status. The white is the accent; status tints are muted and always paired with a label or shape. */
+  --accent: #f0f0fa;
+  --accent-ink: #000000;
+  --ok: #8fd6a4;
+  --warn: #e6c27a;
+  --bad: #ea8f8f;
+
+  /* origin colors (US / China / third country) carry meaning on the globe and in the planner */
+  --us: #8fd6a4;
+  --cn: #ea8f8f;
+  --third: #e6c27a;
+
+  /* type */
+  --font-display: "Barlow", "Barlow Semi Condensed", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-body: "Barlow", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* shape + motion */
+  --radius-s: 2px;
+  --radius-m: 4px;
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+
+  /* layout (site only) */
+  --gutter: 100px;
+  --nav-h: 76px;
+}
+@media (max-width: 1100px) { :root { --gutter: 48px; } }
+@media (max-width: 700px) { :root { --gutter: 20px; --nav-h: 64px; } }

@@ -1,0 +1,21 @@
+[Unit]
+Description=Wi-Fi analyzer: listen for the T-Deck, LoRa32 and watch Bluetooth adverts (passive)
+After=bluetooth.service wifi-analyzer-scan.service
+Wants=bluetooth.service
+Requires=wifi-analyzer-scan.service
+
+[Service]
+Type=simple
+ExecStartPre=-/usr/sbin/rfkill unblock bluetooth
+ExecStart=/usr/bin/python3 /opt/wifi-analyzer/pi5/group_listen.py
+Restart=on-failure
+RestartSec=10
+ProtectSystem=strict
+ReadWritePaths=/var/lib/wifi-analyzer
+ReadOnlyPaths=/run/wifi-analyzer
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
