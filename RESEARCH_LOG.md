@@ -278,3 +278,23 @@ None beyond this repo. GPS does not work indoors, and browsers give the Geolocat
 ### Open questions
 - Is a 20 s window per spot right? A shorter one is quicker to walk; a longer one catches more intermittent drops.
 - Should the T-Deck mark spots itself (a key that sends a "mark" in its advert), so the phone is not needed for marking?
+
+## 2026-10-15: Fact-check of a Grok summary (IFS Unleashed, unions, A2 compute, Nori)
+
+Start 17:25 UTC, end 17:35 UTC, about 10 minutes.
+
+### Sources
+- IFS announcement, 17 Dec 2025: https://www.ifs.com/news/corporate/ifs-announces-ifs-unleashed-and-ifs-connect-series
+- NVIDIA Jetson AGX Orin technical brief: https://nvidia.com/content/dam/en-zz/Solutions/gtcf21/jetson-orin/nvidia-jetson-agx-orin-technical-brief.pdf
+- TechForce TIM-E press release (company-issued): https://www.nasdaq.com/press-release/techforce-robotics-deploys-tim-e-autonomous-service-robot-del-mar-california-hotel and Hotel Dive: https://www.hoteldive.com/news/hotel-robot-labor-efficiency/813064/
+- Hotel Trades Council contract summary: https://hotelworkers.org/news/enhanced-job-security
+- AimDK A2 overview v1.3 (already in this log).
+
+### Conclusion
+- Confirmed: IFS Unleashed 12-16 Oct 2026 in Orlando. AGX Orin 64GB figures (2048 CUDA cores, 275 INT8 TOPS, 64GB LPDDR5). A2 has an x86 board and an Orin board on Ethernet (AimDK). TIM-E at Homewood Suites Del Mar under robotics-as-a-service, hauling linen and waste bins.
+- Contradicted: the NYC hotel agreement (1 Jul 2026 to 30 Jun 2034) requires 120 days' notice and bargaining before new technology, not "up to six months".
+- Not verified: IFS ticket prices and attendance, TIM-E's ~$150/day, the $100k housekeeper figure, "two-thirds of UNITE HERE members", the x86 being 16-core or locked, the photographed connector, which radio the e-stop remote uses. Grok wrote "AGBot"; the maker is AgiBot.
+
+### Open questions
+- Full text of the NYC technology and wage clauses.
+- TIM-E actual pricing (ask TechForce directly).
