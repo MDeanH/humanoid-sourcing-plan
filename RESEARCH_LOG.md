@@ -298,3 +298,29 @@ Start 17:25 UTC, end 17:35 UTC, about 10 minutes.
 ### Open questions
 - Full text of the NYC technology and wage clauses.
 - TIM-E actual pricing (ask TechForce directly).
+
+## 2026-10-20 — Accuracy review of the CHM2045 study guide (chm2045-guide-preview.netlify.app)
+
+- Start: 2026-10-20 21:02 UTC
+- End: 2026-10-20 23:45 UTC
+- Duration: about 2 h 45 min, of which about 1.5 h was waiting out the account's session usage limit (hit 21:25 UTC, reset 22:30 UTC, review resumed 22:56 UTC).
+
+### Question
+Review https://chm2045-guide-preview.netlify.app (General Chemistry I notes, chapters 6 to 9, 24 pages plus the element data behind the periodic-table views) for accuracy.
+
+### Sources
+- The site itself, rendered in headless Chromium with all steps revealed, both wordings captured and animation captions sampled; its 77 figure scripts and the exported element data.
+- Silberberg and Amateis, Chemistry: The Molecular Nature of Matter and Change, 8th ed. (from knowledge; the publisher's table of contents and the printed figures were not retrievable online).
+- NIST ionization energies; https://en.wikipedia.org/wiki/Fluorine_compounds and https://en.wikipedia.org/wiki/Oxidation_state (oxygen and fluorine oxidation states); https://chem-textbook.ucalgary.ca/?p=8102 (effective nuclear charge); Slater's rules.
+- Method: agent workflows, one reviewer per page (two on the six overview pages and Worksheet 5), one refuting verifier per finding with a tie-breaker on uncertainty; 40 findings judged, 24 confirmed, 16 rejected. Full report: `docs/chm2045-guide-accuracy-review.md`.
+
+### Conclusion
+- All worked-problem answers and multiple-choice keys on the site are correct (every calculation recomputed in Python). Definitions, sign conventions, trends, configurations and the 118-row element table check out, with one exception.
+- Substantive: the oxidation-number figure gives O "+6/−2" and F "+7/−1" (chemically impossible; F is −1 only, O at most +2). Root cause is the group-number rule applied to every p-block row in assets/js/elements.js; it shows on Lecture 23, the Lecture 26 fluorine card and the periodic-table tool.
+- Ten minor slips (wrong sign in a live calorimeter line, three wrong distractor or sig-fig notes on Worksheet 5, a wrong figure cross-reference, "984 kJ" missing "/mol", a wrong sig-fig justification, "7.4 The nuclear atom" mislabel in three places, nobelium 1.5 vs 1.3, interpolated numbers in mid-sweep captions) and ten loose-wording items, none changing an answer.
+- Navigation and constants: all 303 topic links resolve, home-page counts match, constants consistent, no console errors.
+
+### Open questions
+- What Silberberg's printed Figure 8.22 lists for O and F, and Figure 9.21 for No; not retrievable online.
+- The figure-script text was not reviewed separately and the planned third pass did not run (usage limit), so other mid-animation interpolated readouts may exist.
+- Whether the guide should annotate worksheet-inherited oddities (CO2 laser at 1.05 μm, fictional ΔH values in Worksheet 5) consistently; it does so for some and not others.
