@@ -138,3 +138,21 @@ Confirmed by the independent reviewer and, where marked, by me on the live site:
 | Presentation | Hide intermediate numbers during the periodic-table sweeps, or show a value only when an element is reached. A clarity issue, not a chemistry error: the arrow already marks transitions and tile values are correct on arrival. |
 
 Everything else found in this review is confirmed fixed on the live site or accepted as is.
+
+## Primary-source check and fixes, 21 October 2026 (afternoon)
+
+Michael supplied the course's own files: the Lecture 12, 13, 14, 19 and 20 slide decks, the original Worksheets 5 and 7, Alanna's chapter notes (PDF, with the lecture's copy of Figure 9.21 embedded), and the bomb-calorimeter widget source. Checked against them:
+
+- Confirmed as the course's own data or wording, so the guide reports them faithfully: Worksheet 5's −427 kJ for 2 O3 → 3 O2 and its −92 kJ/mol for ½ N2 + 3/2 H2 → NH3; "molar heat of combustion" in Q8; Worksheet 7's "carbon dioxide laser … 1.05 micrometer"; the 0.50 Å x-ray wavelength in the Lecture 19 version of Sample Problem 7.1; "ΔH is the change in heat for a system at constant pressure" verbatim on the Lecture 12 and 13 slides; the four nuclear-atom experiments including beryllium/paraffin wax on Lecture 20 slides 3 and 4.
+- Section 7.4: the Lecture 20 deck's own outline slide lists 7.4 as "The Quantum-Mechanical Model of the Atom", with "The Nuclear Atom" as unnumbered opening slides. The relabelling below matches the deck.
+- Nobelium: the lecture's Figure 9.21 prints No = 1.5, so the guide's value was a faithful transcription. It stays 1.5, labelled as the figure's, with a detail-panel note that PubChem lists 1.3 and the Royal Society of Chemistry lists no value. The earlier suggestion to change it to 1.3 is withdrawn.
+- Not checkable from the supplied files: the Chapter 8 slides (Figures 8.22 and 8.24) were not included, so the oxygen and fluorine oxidation numbers and the Sb2O5 label are still corrected on chemistry grounds rather than compared with the printed figure.
+
+Edits made to a copy of the live site (7 files changed, the other 99 byte-identical; verified in a local browser render with no console errors on any page):
+
+1. assets/js/elements.js: Sb2O5 acidity "weakly basic" → "acidic", with a note shown in the tile and detail panel that the lecture figure prints "weakly basic"; nobelium keeps 1.5 with the source note.
+2. ch06/worksheet-5.html: a "Data check" paragraph added to the Q11 Note, keeping the worksheet's inputs and −233 kJ answer.
+3. index.html, ch07/index.html, ch07/lesson-20.html, assets/js/nav-data.js: "7.4" moved to "The quantum-mechanical model of the atom"; "The nuclear atom" listed as background from Chapter 2 (Silberberg §2.4).
+4. assets/js/ptable.js: between tiles the sweep caption shows only the transition label ("Na → Mg …"); the value appears when the highlight reaches an element.
+
+The corrected site is packaged as chm2045-guide-corrected.zip (106 files). Publishing it to chm2045-guide-preview is a production deploy and was left for Michael to approve or to do by drag-and-drop in Netlify.
