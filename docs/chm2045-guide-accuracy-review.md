@@ -114,3 +114,15 @@ A second reviewer recalculated the disputed numbers and compared the report with
 - **"Copied from the lecture or textbook" rejections.** Those establish provenance, not correctness. Of the rejected items, Sb2O5 "weakly basic" deserves a second look regardless of source: antimony(V) oxide is usually described as acidic to amphoteric. The others remain acceptable at the course's level.
 
 Confirmed fixed on the live site on 21 October: oxygen and fluorine oxidation numbers (element data now O +2/−2 with an OF2 note, F "never positive"); the Worksheet 5 Q7 and Q9 distractor notes; the Q8 ΔE label; Sample Problem 6.6 at −55.5 kJ/mol; the hydrogen-atom qualifier on the Lecture 20 orbital-energy ladder; the calorimeter widget now dividing qrxn. Not rechecked: the nobelium tile, the "7.4 The nuclear atom" headings, the Lecture 19 "984 kJ" labels, and the mid-sweep captions.
+
+### Second recheck, 21 October 2026
+
+Confirmed by the independent reviewer and, where marked, by me on the live site:
+
+- Ammonia: Worksheet 5 Q3, solution B now explains that −92 kJ belongs to the doubled equation and gives −45.9 kJ for the equation shown (reviewer).
+- "984 kJ" labels on Lecture 19: the served figure code now distinguishes J per atom from kJ/mol and separates the photon's positive energy from the atom's negative ΔE (reviewer).
+- Nobelium: still 1.5 in the guide's table. PubChem lists 1.3 (Pauling); the Royal Society of Chemistry lists it as unknown. Cite the adopted table.
+- "7.4 The nuclear atom": still on the home page, the Chapter 7 topic list and the Lecture 20 navigation, while the lecture title names §7.4 as the quantum-mechanical model. Still open.
+- Sb2O5: the live element data still says "weakly basic" (checked). Antimony pentoxide is described as acidic in the federal toxicological profile for antimony and as acidic to amphoteric generally. Correct the label or add a source-backed qualification. My earlier acceptance of it on provenance grounds is withdrawn.
+- Ozone, Worksheet 5 Q11: the worksheet gives 2 O3(g) → 3 O2(g), ΔH° = −427 kJ. With NIST's ΔH°f(O3) = +142.67 kJ/mol the decomposition is about −285.3 kJ. The −233 kJ answer follows correctly from the supplied numbers, so keep the exercise but add a note that the supplied ozone value conflicts with standard data. Missed in the first pass and in the reviewer's first pass.
+- Mid-sweep captions, rendered check (headless Chromium, live /ch08/lesson-22, captions read every 0.25 s): between tiles the readout shows interpolated values with an arrow label, for example "Na → Mg 182 pm", "Na → Mg 176 pm", "Mg → Al 152 pm", "K → Rb 244 pm", "K → Rb 406 kJ/mol", "Si → P −103 kJ/mol". On a tile the caption shows the tile value ("Mg 160 pm", "Al 577 kJ/mol"). The arrow does mark the number as a transition, which is one of the three acceptable treatments, but a paused frame still displays a number that is no element's value. The same code drives the Lecture 23 and Lecture 26 sweeps. Hiding the number during movement or snapping to the next tile would remove the ambiguity entirely.
