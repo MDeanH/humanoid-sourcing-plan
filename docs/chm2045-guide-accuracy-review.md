@@ -126,3 +126,15 @@ Confirmed by the independent reviewer and, where marked, by me on the live site:
 - Sb2O5: the live element data still says "weakly basic" (checked). Antimony pentoxide is described as acidic in the federal toxicological profile for antimony and as acidic to amphoteric generally. Correct the label or add a source-backed qualification. My earlier acceptance of it on provenance grounds is withdrawn.
 - Ozone, Worksheet 5 Q11: the worksheet gives 2 O3(g) → 3 O2(g), ΔH° = −427 kJ. With NIST's ΔH°f(O3) = +142.67 kJ/mol the decomposition is about −285.3 kJ. The −233 kJ answer follows correctly from the supplied numbers, so keep the exercise but add a note that the supplied ozone value conflicts with standard data. Missed in the first pass and in the reviewer's first pass.
 - Mid-sweep captions, rendered check (headless Chromium, live /ch08/lesson-22, captions read every 0.25 s): between tiles the readout shows interpolated values with an arrow label, for example "Na → Mg 182 pm", "Na → Mg 176 pm", "Mg → Al 152 pm", "K → Rb 244 pm", "K → Rb 406 kJ/mol", "Si → P −103 kJ/mol". On a tile the caption shows the tile value ("Mg 160 pm", "Al 577 kJ/mol"). The arrow does mark the number as a transition, which is one of the three acceptable treatments, but a paused frame still displays a number that is no element's value. The same code drives the Lecture 23 and Lecture 26 sweeps. Hiding the number during movement or snapping to the next tile would remove the ambiguity entirely.
+
+## Remaining work, agreed 21 October 2026
+
+| Priority | Change |
+|---|---|
+| High | Correct or explicitly qualify the Sb2O5 "weakly basic" label in the element data (antimony pentoxide is acidic to amphoteric). |
+| High | Add a data note beside Worksheet 5 Q11: the supplied −427 kJ for 2 O3 → 3 O2 conflicts with standard thermochemistry (about −285 kJ from NIST's ΔH°f(O3) = +142.67 kJ/mol). Keep the worksheet's inputs and its −233 kJ answer. |
+| Lower | Cite the source adopted for nobelium's electronegativity (PubChem 1.3; RSC lists it as unknown) and note the uncertainty. |
+| Lower | Make the §7.4 headings and navigation consistent: home page, Chapter 7 topic list, Lecture 20. |
+| Presentation | Hide intermediate numbers during the periodic-table sweeps, or show a value only when an element is reached. A clarity issue, not a chemistry error: the arrow already marks transitions and tile values are correct on arrival. |
+
+Everything else found in this review is confirmed fixed on the live site or accepted as is.
