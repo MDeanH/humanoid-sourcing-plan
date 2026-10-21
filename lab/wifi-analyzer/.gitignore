@@ -1,0 +1,10 @@
+# Build outputs and caches. Captures never live in the repo at all: they go to ~/robot-lab-captures/<run>/.
+mac/build/
+tdeck/.pio/
+tdeck/build/
+watch/build/
+pi5/build/
+web/__pycache__/
+*.bin
+*.img
+*.img.xz

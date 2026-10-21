@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wi-Fi Lab">
+<meta name="theme-color" content="#0b0e12">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="stylesheet" href="/static/style.css">
+<title>Wi-Fi Lab</title>
+</head>
+<body>
+<header>
+  <div class="title"><span id="run">…</span><span id="status" class="dim">connecting</span></div>
+  <nav>
+    <button data-view="channels" class="on">Channels</button>
+    <button data-view="networks">Networks</button>
+    <button data-view="track">Track</button>
+    <button data-view="link">Link</button>
+    <button data-view="map">Map</button>
+    <button data-view="group" id="groupbtn" hidden>Group</button>
+  </nav>
+</header>
+
+<main>
+  <section id="channels" class="view on">
+    <p class="dim small">Networks heard in the last <span class="win">15 min</span>, per channel. Bar colour is the strongest signal there. 1, 6 and 11 are the 2.4 GHz channels that do not overlap; DFS channels (5 GHz 52-144) can force a channel change mid-show.</p>
+    <div id="chanbands"></div>
+    <div id="maclink" class="card small"></div>
+  </section>
+
+  <section id="networks" class="view">
+    <p class="dim small">Strongest first. Tap one to track it.</p>
+    <ul id="netlist" class="list"></ul>
+  </section>
+
+  <section id="track" class="view">
+    <div id="trackhead" class="card"><p class="dim">Pick a network on Networks.</p></div>
+    <svg id="trackchart" viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="signal over time"></svg>
+    <p class="dim small">Each point is one time the scanner (Mac or Pi) heard it. Green dashes: -67 dBm (good or better above). Red dashes: -75 dBm (poor below).</p>
+  </section>
+
+  <section id="map" class="view">
+    <div class="row small">
+      <label class="filebtn">Floor plan…<input type="file" id="fpfile" accept="image/*" hidden></label>
+      <select id="metric" aria-label="What the colours show">
+        <option value="phone_ms">Phone round trip</option>
+        <option value="phone_loss_pct">Phone losses</option>
+        <option value="tdeck_dbm">T-Deck: tracked network</option>
+        <option value="scan_dbm">Scanner: tracked network</option>
+        <option value="pax">Crowd (LoRa32 count)</option>
+      </select>
+    </div>
+    <div id="mapwrap" class="noplan"><img id="fpimg" alt="floor plan" hidden><canvas id="mapcanvas"></canvas></div>
+    <div class="row">
+      <button id="markbtn" class="primary">Mark where I am</button>
+      <button id="undobtn">Undo last</button>
+    </div>
+    <p id="maphint" class="dim small">Walk the spots the robot will use. At each one, tap Mark, then tap the spot on the plan. A point records the last 20 s of this phone's link test (start it on Link), the T-Deck's tracked network if a T-Deck is tracking, the scanner's reading of the network picked on Track (from a carried Pi; a Mac on a desk measures the desk), and the LoRa32 crowd count. Colours: green good, yellow fair, red poor (-67/-75 dBm, 50/250 ms; losses 1%/5%, our choice).</p>
+    <ul id="maplist" class="list"></ul>
+  </section>
+
+  <section id="group" class="view">
+    <p class="dim small">The boards' Bluetooth reports, as heard by this computer. The T-Deck, LoRa32 and watch hear 2.4 GHz only.</p>
+    <div id="grouplist"></div>
+  </section>
+
+  <section id="link" class="view">
+    <div class="card">
+      <div class="big"><span id="rtt">–</span><span class="unit">ms</span></div>
+      <div id="rttgrade" class="grade">not running</div>
+      <div class="stats small" id="pingstats"></div>
+    </div>
+    <svg id="pingchart" viewBox="0 0 360 120" preserveAspectRatio="none" role="img" aria-label="round trips"></svg>
+    <div class="row">
+      <button id="pingtoggle" class="primary">Start link test</button>
+      <button id="notebtn">Add note</button>
+    </div>
+    <p class="dim small">This phone asks the server (Mac or Pi) for a tiny reply every 500 ms and times it. No reply within 2 s counts as lost. Results go to <code>iphone-probe.tsv</code> on the server; if the link drops they wait on the phone and are sent when it comes back (<span id="pending">0</span> waiting). Under 50 ms is good, 250 ms or more is poor (FIRST). Keep the screen on while it runs.</p>
+    <p id="notestatus" class="small"></p>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

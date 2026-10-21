@@ -1,0 +1,9 @@
+{
+  "name": "Wi-Fi Lab",
+  "short_name": "Wi-Fi Lab",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0e12",
+  "theme_color": "#0b0e12",
+  "icons": [{ "src": "/icon-180.png", "sizes": "180x180", "type": "image/png" }]
+}
